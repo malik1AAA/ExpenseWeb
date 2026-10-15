@@ -44,8 +44,16 @@ export function FinanceProvider({ children }) {
     );
   }, []);
 
-  const importExpenses = useCallback((newExpenses) => {
-    setExpenses(prev => [...newExpenses, ...prev]);
+  const importExpenses = useCallback((newExpenses, options = {}) => {
+    if (options.replace) {
+      setExpenses(newExpenses);
+    } else {
+      setExpenses(prev => [...newExpenses, ...prev]);
+    }
+  }, []);
+
+  const clearExpenses = useCallback(() => {
+    setExpenses([]);
   }, []);
 
   // Debt actions
@@ -70,6 +78,18 @@ export function FinanceProvider({ children }) {
     );
   }, []);
 
+  const importDebts = useCallback((newDebts, options = {}) => {
+    if (options.replace) {
+      setDebts(newDebts);
+    } else {
+      setDebts(prev => [...newDebts, ...prev]);
+    }
+  }, []);
+
+  const clearDebts = useCallback(() => {
+    setDebts([]);
+  }, []);
+
   // Debt Return actions
   const addDebtReturn = useCallback((returnData) => {
     const newReturn = createDebtReturn(returnData);
@@ -83,6 +103,18 @@ export function FinanceProvider({ children }) {
     );
   }, []);
 
+  const importDebtReturns = useCallback((newReturns, options = {}) => {
+    if (options.replace) {
+      setDebtReturns(newReturns);
+    } else {
+      setDebtReturns(prev => [...newReturns, ...prev]);
+    }
+  }, []);
+
+  const clearDebtReturns = useCallback(() => {
+    setDebtReturns([]);
+  }, []);
+
   // Category actions
   const addCategory = useCallback((categoryData) => {
     const newCategory = {
@@ -93,6 +125,18 @@ export function FinanceProvider({ children }) {
     };
     setCategories(prev => [...prev, newCategory]);
     return newCategory;
+  }, []);
+
+  const importCategories = useCallback((newCategories, options = {}) => {
+    if (options.replace) {
+      setCategories(newCategories);
+    } else {
+      setCategories(prev => [...newCategories, ...prev]);
+    }
+  }, []);
+
+  const clearCategories = useCallback(() => {
+    setCategories([]);
   }, []);
 
   // Loading state
@@ -114,18 +158,25 @@ export function FinanceProvider({ children }) {
     updateExpense: updateExpenseById,
     deleteExpense,
     importExpenses,
+    clearExpenses,
     
     // Debt actions
     addDebt,
     updateDebt: updateDebtById,
     deleteDebt,
+    importDebts,
+    clearDebts,
     
     // Debt Return actions
     addDebtReturn,
     deleteDebtReturn,
+    importDebtReturns,
+    clearDebtReturns,
     
     // Category actions
     addCategory,
+    importCategories,
+    clearCategories,
     
     // Utility
     setLoading,
