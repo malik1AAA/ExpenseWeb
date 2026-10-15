@@ -1,8 +1,11 @@
 import { Plus } from 'lucide-react';
 import { formatDate } from '../../utils/dateUtils';
 import { formatCurrency } from '../../utils/currencyUtils';
-import { getCategoryById } from '../../data/sampleData';
+import { getCategoryName } from '../../data/sampleData';
 import EmptyState from '../common/EmptyState';
+import { COLUMNS } from '../../config/excelSchema';
+
+const COL = COLUMNS.EXPENSES;
 
 /**
  * ExpenseTable - Table displaying expense list
@@ -40,6 +43,9 @@ function ExpenseTable({ expenses = [], onEdit, onDelete }) {
               <th className="px-4 py-3 text-right text-xs font-semibold text-surface-500 uppercase tracking-wider">
                 Amount
               </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">
+                Payment Method
+              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-surface-500 uppercase tracking-wider">
                 Actions
               </th>
@@ -47,29 +53,25 @@ function ExpenseTable({ expenses = [], onEdit, onDelete }) {
           </thead>
           <tbody className="divide-y divide-surface-100">
             {expenses.map((expense) => {
-              const category = getCategoryById(expense.category);
+              const categoryName = getCategoryName(expense[COL.CATEGORY]);
               return (
-                <tr key={expense.id} className="hover:bg-surface-50 transition-colors">
+                <tr key={expense[COL.EXPENSE_ID]} className="hover:bg-surface-50 transition-colors">
                   <td className="px-4 py-3 text-sm text-surface-600">
-                    {formatDate(expense.date, 'MMM dd')}
+                    {formatDate(expense[COL.DATE], 'MMM dd')}
                   </td>
                   <td className="px-4 py-3 text-sm font-medium text-surface-800">
-                    {expense.description}
+                    {expense[COL.DESCRIPTION]}
                   </td>
                   <td className="px-4 py-3">
-                    <span 
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                      style={{ 
-                        backgroundColor: `${category?.color}15`,
-                        color: category?.color || '#64748b'
-                      }}
-                    >
-                      <span>{category?.icon || '📦'}</span>
-                      {category?.name || expense.category}
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-700">
+                      {categoryName}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm font-semibold text-surface-800 text-right">
-                    {formatCurrency(expense.amount)}
+                    {formatCurrency(expense[COL.AMOUNT])}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-surface-600">
+                    {expense[COL.PAYMENT_METHOD] || '—'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -83,7 +85,7 @@ function ExpenseTable({ expenses = [], onEdit, onDelete }) {
                       )}
                       {onDelete && (
                         <button 
-                          onClick={() => onDelete(expense.id)}
+                          onClick={() => onDelete(expense[COL.EXPENSE_ID])}
                           className="text-xs text-red-600 hover:text-red-700 font-medium"
                         >
                           Delete

@@ -2,6 +2,11 @@
  * Debt Service - Business logic for debt management
  */
 
+import { COLUMNS, DEBT_DIRECTION } from '../config/excelSchema';
+
+const COL = COLUMNS.DEBTS;
+const RET_COL = COLUMNS.DEBT_RETURNS;
+
 /**
  * Calculate monthly interest
  * @param {number} principal - Remaining principal
@@ -71,14 +76,14 @@ export const getDebtStatus = (remaining, total) => {
 };
 
 /**
- * Filter debts by status
+ * Filter debts by direction
  * @param {Array} debts - Array of debt objects
- * @param {string} status - Status to filter by
+ * @param {string} direction - Direction to filter by (Lent/Borrowed)
  * @returns {Array} Filtered debts
  */
-export const filterDebtsByStatus = (debts, status) => {
-  if (!status || status === 'all') return debts;
-  return debts.filter(debt => debt.status === status);
+export const filterDebtsByDirection = (debts, direction) => {
+  if (!direction || direction === 'all') return debts;
+  return debts.filter(debt => debt[COL.DIRECTION] === direction);
 };
 
 /**
@@ -88,14 +93,14 @@ export const filterDebtsByStatus = (debts, status) => {
  */
 export const sortDebtsByDueDate = (debts) => {
   return [...debts].sort((a, b) => {
-    const dateA = new Date(a.dueDate);
-    const dateB = new Date(b.dueDate);
+    const dateA = new Date(a[COL.DUE_DATE]);
+    const dateB = new Date(b[COL.DUE_DATE]);
     return dateA - dateB;
   });
 };
 
 /**
- * Sort debts by remaining amount
+ * Sort debts by original amount
  * @param {Array} debts - Array of debt objects
  * @param {string} order - 'asc' or 'desc'
  * @returns {Array} Sorted debts
@@ -103,8 +108,8 @@ export const sortDebtsByDueDate = (debts) => {
 export const sortDebtsByAmount = (debts, order = 'desc') => {
   return [...debts].sort((a, b) => {
     return order === 'desc'
-      ? b.remainingAmount - a.remainingAmount
-      : a.remainingAmount - b.remainingAmount;
+      ? b[COL.ORIGINAL_AMOUNT] - a[COL.ORIGINAL_AMOUNT]
+      : a[COL.ORIGINAL_AMOUNT] - b[COL.ORIGINAL_AMOUNT];
   });
 };
 
@@ -115,30 +120,71 @@ export const sortDebtsByAmount = (debts, order = 'desc') => {
  */
 export const createDebt = (debtData) => {
   return {
-    id: generateId(),
-    name: debtData.name || '',
-    totalAmount: Number(debtData.totalAmount) || 0,
-    remainingAmount: Number(debtData.remainingAmount) || Number(debtData.totalAmount) || 0,
-    monthlyPayment: Number(debtData.monthlyPayment) || 0,
-    interestRate: Number(debtData.interestRate) || 0,
-    dueDate: debtData.dueDate || '',
-    status: 'active',
-    createdAt: new Date().toISOString(),
+    [COL.DEBT_ID]: generateId(),
+    [COL.PERSON]: debtData[COL.PERSON] || '',
+    [COL.DEBT_CATEGORY]: debtData[COL.DEBT_CATEGORY] || 'Cash',
+    [COL.DIRECTION]: debtData[COL.DIRECTION] || DEBT_DIRECTION.LENT,
+    [COL.ORIGINAL_AMOUNT]: Number(debtData[COL.ORIGINAL_AMOUNT]) || 0,
+    [COL.DATE]: debtData[COL.DATE] || new Date().toISOString().split('T')[0],
+    [COL.DUE_DATE]: debtData[COL.DUE_DATE] || '',
+    [COL.NOTES]: debtData[COL.NOTES] || '',
   };
 };
 
 /**
  * Calculate total debt summary
  * @param {Array} debts - Array of debt objects
- * @returns {{ totalDebt: number, monthlyPayments: number, count: number }}
+ * @param {Array} returns - Array of debt returns
+ * @returns {{ totalLent: number, totalBorrowed: number, count: number }}
  */
-export const calculateDebtSummary = (debts) => {
-  const activeDebts = debts.filter(d => d.status === 'active');
+export const calculateDebtSummary = (debts, returns = []) => {
+  let totalLent = 0;
+  let totalBorrowed = 0;
+  
+  debts.forEach(debt => {
+    const remaining = calculateRemainingDebt(debt, returns);
+    
+    if (debt[COL.DIRECTION] === DEBT_DIRECTION.LENT) {
+      totalLent += remaining;
+    } else {
+      totalBorrowed += remaining;
+    }
+  });
   
   return {
-    totalDebt: activeDebts.reduce((sum, d) => sum + (Number(d.remainingAmount) || 0), 0),
-    monthlyPayments: activeDebts.reduce((sum, d) => sum + (Number(d.monthlyPayment) || 0), 0),
-    count: activeDebts.length,
+    totalLent,
+    totalBorrowed,
+    count: debts.length,
+  };
+};
+
+/**
+ * Calculate remaining debt amount
+ * @param {Object} debt - Debt object
+ * @param {Array} returns - All debt returns
+ * @returns {number} Remaining amount
+ */
+export const calculateRemainingDebt = (debt, returns = []) => {
+  const debtId = debt[COL.DEBT_ID];
+  const totalReturned = returns
+    .filter(ret => ret[RET_COL.DEBT_ID] === debtId)
+    .reduce((sum, ret) => sum + ret[RET_COL.AMOUNT], 0);
+  
+  return debt[COL.ORIGINAL_AMOUNT] - totalReturned;
+};
+
+/**
+ * Create a new debt return object
+ * @param {Object} returnData - Return data
+ * @returns {Object} New debt return with generated ID
+ */
+export const createDebtReturn = (returnData) => {
+  return {
+    [RET_COL.RETURN_ID]: generateReturnId(),
+    [RET_COL.DEBT_ID]: returnData[RET_COL.DEBT_ID] || '',
+    [RET_COL.DATE]: returnData[RET_COL.DATE] || new Date().toISOString().split('T')[0],
+    [RET_COL.AMOUNT]: Number(returnData[RET_COL.AMOUNT]) || 0,
+    [RET_COL.NOTES]: returnData[RET_COL.NOTES] || '',
   };
 };
 
@@ -147,5 +193,13 @@ export const calculateDebtSummary = (debts) => {
  * @returns {string} Unique ID
  */
 const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  return 'DEBT' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5).toUpperCase();
+};
+
+/**
+ * Generate unique return ID
+ * @returns {string} Unique return ID
+ */
+const generateReturnId = () => {
+  return 'RET' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5).toUpperCase();
 };

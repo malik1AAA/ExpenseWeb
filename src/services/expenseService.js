@@ -2,6 +2,10 @@
  * Expense Service - Business logic for expense management
  */
 
+import { COLUMNS } from '../config/excelSchema';
+
+const COL = COLUMNS.EXPENSES;
+
 /**
  * Filter expenses by date range
  * @param {Array} expenses - Array of expense objects
@@ -14,7 +18,7 @@ export const filterByDateRange = (expenses, startDate, endDate) => {
   const end = new Date(endDate);
   
   return expenses.filter(expense => {
-    const expenseDate = new Date(expense.date);
+    const expenseDate = new Date(expense[COL.DATE]);
     return expenseDate >= start && expenseDate <= end;
   });
 };
@@ -27,7 +31,7 @@ export const filterByDateRange = (expenses, startDate, endDate) => {
  */
 export const filterByCategory = (expenses, categoryId) => {
   if (!categoryId || categoryId === 'all') return expenses;
-  return expenses.filter(expense => expense.category === categoryId);
+  return expenses.filter(expense => expense[COL.CATEGORY] === categoryId);
 };
 
 /**
@@ -41,8 +45,8 @@ export const searchExpenses = (expenses, query) => {
   
   const lowerQuery = query.toLowerCase().trim();
   return expenses.filter(expense => 
-    expense.description?.toLowerCase().includes(lowerQuery) ||
-    expense.category?.toLowerCase().includes(lowerQuery)
+    expense[COL.DESCRIPTION]?.toLowerCase().includes(lowerQuery) ||
+    expense[COL.CATEGORY]?.toLowerCase().includes(lowerQuery)
   );
 };
 
@@ -54,8 +58,8 @@ export const searchExpenses = (expenses, query) => {
  */
 export const sortExpensesByDate = (expenses, order = 'desc') => {
   return [...expenses].sort((a, b) => {
-    const dateA = new Date(a.date);
-    const dateB = new Date(b.date);
+    const dateA = new Date(a[COL.DATE]);
+    const dateB = new Date(b[COL.DATE]);
     return order === 'desc' ? dateB - dateA : dateA - dateB;
   });
 };
@@ -69,8 +73,8 @@ export const sortExpensesByDate = (expenses, order = 'desc') => {
 export const sortExpensesByAmount = (expenses, order = 'desc') => {
   return [...expenses].sort((a, b) => {
     return order === 'desc' 
-      ? Number(b.amount) - Number(a.amount)
-      : Number(a.amount) - Number(b.amount);
+      ? Number(b[COL.AMOUNT]) - Number(a[COL.AMOUNT])
+      : Number(a[COL.AMOUNT]) - Number(b[COL.AMOUNT]);
   });
 };
 
@@ -81,13 +85,13 @@ export const sortExpensesByAmount = (expenses, order = 'desc') => {
  */
 export const createExpense = (expenseData) => {
   return {
-    id: generateId(),
-    date: expenseData.date || new Date().toISOString().split('T')[0],
-    description: expenseData.description || '',
-    category: expenseData.category || 'other',
-    amount: Number(expenseData.amount) || 0,
-    type: 'expense',
-    createdAt: new Date().toISOString(),
+    [COL.EXPENSE_ID]: generateId(),
+    [COL.DATE]: expenseData[COL.DATE] || new Date().toISOString().split('T')[0],
+    [COL.DESCRIPTION]: expenseData[COL.DESCRIPTION] || '',
+    [COL.CATEGORY]: expenseData[COL.CATEGORY] || 'other',
+    [COL.AMOUNT]: Number(expenseData[COL.AMOUNT]) || 0,
+    [COL.PAYMENT_METHOD]: expenseData[COL.PAYMENT_METHOD] || '',
+    [COL.NOTES]: expenseData[COL.NOTES] || '',
   };
 };
 
@@ -101,32 +105,26 @@ export const updateExpense = (existing, updates) => {
   return {
     ...existing,
     ...updates,
-    amount: updates.amount !== undefined ? Number(updates.amount) : existing.amount,
-    updatedAt: new Date().toISOString(),
+    [COL.AMOUNT]: updates[COL.AMOUNT] !== undefined 
+      ? Number(updates[COL.AMOUNT]) 
+      : existing[COL.AMOUNT],
   };
 };
 
 /**
  * Map Excel row to expense object
  * @param {Object} row - Excel row object
- * @param {Object} columnMapping - Column name mapping
  * @returns {Object} Expense object
  */
-export const mapExcelRowToExpense = (row, columnMapping = {}) => {
-  const mapping = {
-    date: columnMapping.date || 'Date',
-    description: columnMapping.description || 'Description',
-    category: columnMapping.category || 'Category',
-    amount: columnMapping.amount || 'Amount',
-  };
-  
+export const mapExcelRowToExpense = (row) => {
   return {
-    id: generateId(),
-    date: row[mapping.date] || '',
-    description: row[mapping.description] || '',
-    category: (row[mapping.category] || 'other').toLowerCase().replace(/\s+/g, '-'),
-    amount: Number(row[mapping.amount]) || 0,
-    type: 'expense',
+    [COL.EXPENSE_ID]: row[COL.EXPENSE_ID] || generateId(),
+    [COL.DATE]: row[COL.DATE] || '',
+    [COL.DESCRIPTION]: row[COL.DESCRIPTION] || '',
+    [COL.CATEGORY]: row[COL.CATEGORY] || 'other',
+    [COL.AMOUNT]: Number(row[COL.AMOUNT]) || 0,
+    [COL.PAYMENT_METHOD]: row[COL.PAYMENT_METHOD] || '',
+    [COL.NOTES]: row[COL.NOTES] || '',
   };
 };
 
@@ -135,5 +133,5 @@ export const mapExcelRowToExpense = (row, columnMapping = {}) => {
  * @returns {string} Unique ID
  */
 const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  return 'EXP' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5).toUpperCase();
 };

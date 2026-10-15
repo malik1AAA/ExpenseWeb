@@ -1,41 +1,46 @@
 import { CreditCard, Clock, CheckCircle2 } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyUtils';
+import { useFinance } from '../../hooks/useFinance';
 
 /**
  * DebtSummaryCards - Summary cards for debts page
  */
-function DebtSummaryCards({ totalDebt = 0, dueThisMonth = 0, paidOff = 0 }) {
+function DebtSummaryCards() {
+  const { debtSummary } = useFinance();
+
   const cards = [
     {
       icon: CreditCard,
-      value: formatCurrency(totalDebt),
-      label: 'Total Debt',
-      color: 'red',
+      value: formatCurrency(debtSummary.totalLent),
+      label: 'Total Lent',
+      color: 'green',
     },
     {
       icon: Clock,
-      value: formatCurrency(dueThisMonth),
-      label: 'Due This Month',
-      color: 'amber',
+      value: formatCurrency(debtSummary.totalBorrowed),
+      label: 'Total Borrowed',
+      color: 'red',
     },
     {
       icon: CheckCircle2,
-      value: paidOff.toString(),
-      label: 'Paid Off',
-      color: 'green',
+      value: debtSummary.count.toString(),
+      label: 'Active Debts',
+      color: 'blue',
     },
   ];
 
   const colorClasses = {
     red: 'bg-red-50',
-    amber: 'bg-amber-50',
     green: 'bg-green-50',
+    blue: 'bg-blue-50',
+    amber: 'bg-amber-50',
   };
 
   const iconColorClasses = {
     red: 'text-red-600',
-    amber: 'text-amber-600',
     green: 'text-green-600',
+    blue: 'text-blue-600',
+    amber: 'text-amber-600',
   };
 
   return (

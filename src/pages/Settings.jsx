@@ -9,6 +9,7 @@ import {
   Download,
   Upload,
 } from "lucide-react";
+import { ExcelManager } from '../components/settings';
 
 function Settings() {
   return (
@@ -25,44 +26,8 @@ function Settings() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Settings */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Data Source */}
-          <div className="bg-white rounded-xl border border-surface-200 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-lg bg-green-50">
-                <FileSpreadsheet className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-surface-800">
-                  Data Source
-                </h3>
-                <p className="text-sm text-surface-500">
-                  Configure Excel file paths and import settings
-                </p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-surface-700 mb-1">
-                  Default Excel File Path
-                </label>
-                <input
-                  type="text"
-                  placeholder="/path/to/your/finance.xlsx"
-                  className="w-full px-3 py-2 border border-surface-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
-                  <Upload className="w-4 h-4" />
-                  Import Now
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-surface-200 rounded-lg text-sm font-medium text-surface-700 hover:bg-surface-50 transition-colors">
-                  <Download className="w-4 h-4" />
-                  Export Backup
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* Excel Data Management */}
+          <ExcelManager />
 
           {/* Categories */}
           <div className="bg-white rounded-xl border border-surface-200 p-6">

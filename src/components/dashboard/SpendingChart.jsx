@@ -1,12 +1,13 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useFinance } from '../../hooks/useFinance';
 import { formatCurrency } from '../../utils/currencyUtils';
+import { getCategoryName } from '../../data/sampleData';
 
 /**
  * SpendingChart - Dashboard spending overview chart using Recharts
  */
 function SpendingChart() {
-  const { topCategories, getCategoryName, getCategoryColor } = useFinance();
+  const { topCategories, getCategoryColor } = useFinance();
 
   // Transform data for Recharts
   const chartData = topCategories.map(item => ({
