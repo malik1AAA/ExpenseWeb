@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Download, FileSpreadsheet } from 'lucide-react';
 import { PageHeader, Button } from '../components/common';
-import { ReportPeriodSelector, ChartPlaceholder, SummaryStats } from '../components/reports';
+import { ReportPeriodSelector, SummaryStats, CategoryChart, MonthlyComparisonChart } from '../components/reports';
 
 function Reports() {
   const [selectedPeriod, setSelectedPeriod] = useState('This Month');
@@ -26,14 +26,8 @@ function Reports() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartPlaceholder
-          title="Category Breakdown"
-          message="Add expenses to see category breakdown"
-        />
-        <ChartPlaceholder
-          title="Monthly Comparison"
-          message="Monthly data will appear here"
-        />
+        <CategoryChart />
+        <MonthlyComparisonChart />
       </div>
 
       {/* Summary Stats */}

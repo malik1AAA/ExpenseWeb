@@ -1,11 +1,21 @@
-import { PieChart } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { useFinance } from '../../hooks/useFinance';
+import { formatCurrency } from '../../utils/currencyUtils';
 
 /**
- * SpendingChart - Dashboard spending overview chart placeholder
- * Will be implemented with Recharts when data is available
+ * SpendingChart - Dashboard spending overview chart using Recharts
  */
-function SpendingChart({ data = [] }) {
-  const hasData = data && data.length > 0;
+function SpendingChart() {
+  const { topCategories, getCategoryName, getCategoryColor } = useFinance();
+
+  // Transform data for Recharts
+  const chartData = topCategories.map(item => ({
+    name: getCategoryName(item.category),
+    value: item.total,
+    color: getCategoryColor(item.category),
+  }));
+
+  const hasData = chartData.length > 0;
 
   return (
     <div className="bg-white rounded-xl border border-surface-200 p-6">
@@ -13,19 +23,50 @@ function SpendingChart({ data = [] }) {
         <h3 className="text-lg font-semibold text-surface-800">
           Spending Overview
         </h3>
-        <PieChart className="w-5 h-5 text-surface-400" />
       </div>
       
       {hasData ? (
-        <div className="h-64 flex items-center justify-center">
-          <p className="text-surface-500">Chart will render here</p>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={80}
+                paddingAngle={2}
+                dataKey="value"
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip 
+                formatter={(value) => formatCurrency(value)}
+                contentStyle={{
+                  backgroundColor: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                }}
+              />
+              <Legend 
+                verticalAlign="bottom" 
+                height={36}
+                formatter={(value) => <span className="text-xs text-surface-600">{value}</span>}
+              />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       ) : (
         <div className="h-64 flex items-center justify-center bg-surface-50 rounded-lg border-2 border-dashed border-surface-200">
           <div className="text-center">
-            <PieChart className="w-12 h-12 text-surface-300 mx-auto mb-2" />
+            <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-surface-100 flex items-center justify-center">
+              <span className="text-2xl">📊</span>
+            </div>
             <p className="text-surface-400 text-sm">
-              Chart will appear here after adding expenses
+              Add expenses to see spending breakdown
             </p>
           </div>
         </div>
