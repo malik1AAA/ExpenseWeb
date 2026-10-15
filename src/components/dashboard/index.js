@@ -1,3 +1,6 @@
-export { default as SpendingChart } from './SpendingChart';
-export { default as TrendsChart } from './TrendsChart';
-export { default as RecentTransactions } from './RecentTransactions';
+export { default as SummaryCard } from './SummaryCard';
+export { default as MonthYearSelector } from './MonthYearSelector';
+export { default as MonthlySpendingChart } from './MonthlySpendingChart';
+export { default as CategoryBreakdownChart } from './CategoryBreakdownChart';
+export { default as RecentExpensesList } from './RecentExpensesList';
+export { default as OutstandingDebtsList } from './OutstandingDebtsList';
