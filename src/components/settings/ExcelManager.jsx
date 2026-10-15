@@ -16,10 +16,7 @@ export default function ExcelManager() {
     debts,
     debtReturns,
     categories,
-    importExpenses,
-    importDebts,
-    importDebtReturns,
-    importCategories,
+    importFinanceData,
   } = useFinance();
 
   const {
@@ -66,15 +63,7 @@ export default function ExcelManager() {
    */
   const confirmImport = async () => {
     setShowConfirmDialog(false);
-    
-    const context = {
-      importExpenses,
-      importDebts,
-      importDebtReturns,
-      importCategories,
-    };
-
-    await handleImport(context);
+    await handleImport(importFinanceData);
   };
 
   /**
