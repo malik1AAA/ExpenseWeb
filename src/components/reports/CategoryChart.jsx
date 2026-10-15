@@ -1,12 +1,13 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useFinance } from '../../hooks/useFinance';
 import { formatCurrency } from '../../utils/currencyUtils';
+import { getCategoryName } from '../../data/sampleData';
 
 /**
  * CategoryChart - Category breakdown chart for reports page using Recharts
  */
 function CategoryChart() {
-  const { topCategories, getCategoryName, getCategoryColor } = useFinance();
+  const { topCategories, getCategoryColor } = useFinance();
 
   const chartData = topCategories.map(item => ({
     name: getCategoryName(item.category),

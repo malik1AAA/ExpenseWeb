@@ -1,35 +1,38 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { sampleExpenses, sampleIncome } from '../../data/sampleData';
+import { useFinance } from '../../hooks/useFinance';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { format, parseISO } from 'date-fns';
+import { COLUMNS } from '../../config/excelSchema';
+
+const COL = COLUMNS.EXPENSES;
 
 /**
- * MonthlyComparisonChart - Monthly income vs expenses comparison using Recharts
+ * MonthlyComparisonChart - Monthly expenses comparison using Recharts
  */
 function MonthlyComparisonChart() {
-  // Group transactions by month
+  const { expenses } = useFinance();
+
+  // Group expenses by month
   const monthlyData = {};
   
-  [...sampleExpenses, ...sampleIncome].forEach(transaction => {
-    const monthKey = format(parseISO(transaction.date), 'yyyy-MM');
-    const monthLabel = format(parseISO(transaction.date), 'MMM yyyy');
+  expenses.forEach(expense => {
+    const dateStr = expense[COL.DATE];
+    if (!dateStr) return;
+    
+    const monthKey = format(parseISO(dateStr), 'yyyy-MM');
+    const monthLabel = format(parseISO(dateStr), 'MMM yyyy');
     
     if (!monthlyData[monthKey]) {
-      monthlyData[monthKey] = { month: monthLabel, income: 0, expenses: 0 };
+      monthlyData[monthKey] = { month: monthLabel, expenses: 0 };
     }
     
-    if (transaction.type === 'income') {
-      monthlyData[monthKey].income += transaction.amount;
-    } else {
-      monthlyData[monthKey].expenses += transaction.amount;
-    }
+    monthlyData[monthKey].expenses += expense[COL.AMOUNT];
   });
 
   const chartData = Object.values(monthlyData).sort((a, b) => {
-    // Sort by month key (chronological)
-    return Object.keys(monthlyData).indexOf(
-      Object.keys(monthlyData).find(k => monthlyData[k] === a)
-    );
+    const dateA = parseISO(Object.keys(monthlyData).find(k => monthlyData[k] === a) + '-01');
+    const dateB = parseISO(Object.keys(monthlyData).find(k => monthlyData[k] === b) + '-01');
+    return dateA - dateB;
   });
 
   const hasData = chartData.length > 0;
@@ -65,12 +68,6 @@ function MonthlyComparisonChart() {
                 }}
               />
               <Legend />
-              <Bar 
-                dataKey="income" 
-                fill="#10b981" 
-                name="Income"
-                radius={[4, 4, 0, 0]}
-              />
               <Bar 
                 dataKey="expenses" 
                 fill="#ef4444" 

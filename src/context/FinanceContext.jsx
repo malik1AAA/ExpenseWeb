@@ -1,7 +1,13 @@
 import { createContext, useState, useCallback } from 'react';
-import { sampleExpenses, sampleIncome, sampleDebts, sampleCategories } from '../data/sampleData';
+import { 
+  sampleExpenses, 
+  sampleDebts, 
+  sampleDebtReturns, 
+  sampleCategories 
+} from '../data/sampleData';
 import { createExpense, updateExpense } from '../services/expenseService';
-import { createDebt } from '../services/debtService';
+import { createDebt, createDebtReturn } from '../services/debtService';
+import { COLUMNS } from '../config/excelSchema';
 
 /**
  * Finance Context - Global state management for the finance application
@@ -10,33 +16,36 @@ export const FinanceContext = createContext(null);
 
 export function FinanceProvider({ children }) {
   // State
-  const [transactions, setTransactions] = useState([...sampleIncome, ...sampleExpenses]);
+  const [expenses, setExpenses] = useState(sampleExpenses);
   const [debts, setDebts] = useState(sampleDebts);
+  const [debtReturns, setDebtReturns] = useState(sampleDebtReturns);
   const [categories, setCategories] = useState(sampleCategories);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Transaction actions
-  const addTransaction = useCallback((transactionData) => {
-    const newTransaction = transactionData.type === 'income' 
-      ? { ...transactionData, id: Date.now().toString(36) + Math.random().toString(36).substr(2) }
-      : createExpense(transactionData);
-    
-    setTransactions(prev => [newTransaction, ...prev]);
-    return newTransaction;
+  // Expense actions
+  const addExpense = useCallback((expenseData) => {
+    const newExpense = createExpense(expenseData);
+    setExpenses(prev => [newExpense, ...prev]);
+    return newExpense;
   }, []);
 
-  const updateTransaction = useCallback((id, updates) => {
-    setTransactions(prev => 
-      prev.map(t => t.id === id ? updateExpense(t, updates) : t)
+  const updateExpenseById = useCallback((expenseId, updates) => {
+    setExpenses(prev => 
+      prev.map(e => e[COLUMNS.EXPENSES.EXPENSE_ID] === expenseId 
+        ? updateExpense(e, updates) 
+        : e
+      )
     );
   }, []);
 
-  const deleteTransaction = useCallback((id) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+  const deleteExpense = useCallback((expenseId) => {
+    setExpenses(prev => 
+      prev.filter(e => e[COLUMNS.EXPENSES.EXPENSE_ID] !== expenseId)
+    );
   }, []);
 
-  const importTransactions = useCallback((newTransactions) => {
-    setTransactions(prev => [...newTransactions, ...prev]);
+  const importExpenses = useCallback((newExpenses) => {
+    setExpenses(prev => [...newExpenses, ...prev]);
   }, []);
 
   // Debt actions
@@ -46,21 +55,41 @@ export function FinanceProvider({ children }) {
     return newDebt;
   }, []);
 
-  const updateDebt = useCallback((id, updates) => {
+  const updateDebtById = useCallback((debtId, updates) => {
     setDebts(prev => 
-      prev.map(d => d.id === id ? { ...d, ...updates } : d)
+      prev.map(d => d[COLUMNS.DEBTS.DEBT_ID] === debtId 
+        ? { ...d, ...updates } 
+        : d
+      )
     );
   }, []);
 
-  const deleteDebt = useCallback((id) => {
-    setDebts(prev => prev.filter(d => d.id !== id));
+  const deleteDebt = useCallback((debtId) => {
+    setDebts(prev => 
+      prev.filter(d => d[COLUMNS.DEBTS.DEBT_ID] !== debtId)
+    );
+  }, []);
+
+  // Debt Return actions
+  const addDebtReturn = useCallback((returnData) => {
+    const newReturn = createDebtReturn(returnData);
+    setDebtReturns(prev => [newReturn, ...prev]);
+    return newReturn;
+  }, []);
+
+  const deleteDebtReturn = useCallback((returnId) => {
+    setDebtReturns(prev => 
+      prev.filter(r => r[COLUMNS.DEBT_RETURNS.RETURN_ID] !== returnId)
+    );
   }, []);
 
   // Category actions
   const addCategory = useCallback((categoryData) => {
     const newCategory = {
-      id: categoryData.name.toLowerCase().replace(/\s+/g, '-'),
-      ...categoryData,
+      [COLUMNS.CATEGORIES.CATEGORY_ID]: categoryData[COLUMNS.CATEGORIES.CATEGORY_ID] || 
+        categoryData[COLUMNS.CATEGORIES.CATEGORY_NAME].toLowerCase().replace(/\s+/g, '-'),
+      [COLUMNS.CATEGORIES.CATEGORY_NAME]: categoryData[COLUMNS.CATEGORIES.CATEGORY_NAME],
+      [COLUMNS.CATEGORIES.TYPE]: categoryData[COLUMNS.CATEGORIES.TYPE] || 'Expense',
     };
     setCategories(prev => [...prev, newCategory]);
     return newCategory;
@@ -74,21 +103,26 @@ export function FinanceProvider({ children }) {
   // Context value
   const value = {
     // State
-    transactions,
+    expenses,
     debts,
+    debtReturns,
     categories,
     isLoading,
     
-    // Transaction actions
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-    importTransactions,
+    // Expense actions
+    addExpense,
+    updateExpense: updateExpenseById,
+    deleteExpense,
+    importExpenses,
     
     // Debt actions
     addDebt,
-    updateDebt,
+    updateDebt: updateDebtById,
     deleteDebt,
+    
+    // Debt Return actions
+    addDebtReturn,
+    deleteDebtReturn,
     
     // Category actions
     addCategory,

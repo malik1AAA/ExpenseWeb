@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { SHEET_NAMES, SHEET_COLUMNS, getRequiredColumns } from '../config/excelSchema';
 
 /**
  * Excel Service - Handles reading and writing Excel files
@@ -46,37 +47,11 @@ export const readExcelFile = async (file, sheetName = null) => {
 };
 
 /**
- * Export data to Excel file
- * @param {Array} data - Array of objects to export
- * @param {string} filename - Output filename (without extension)
- * @param {string} sheetName - Sheet name (default: 'Sheet1')
- */
-export const exportToExcel = (data, filename = 'finance-data', sheetName = 'Sheet1') => {
-  try {
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-    
-    // Auto-size columns
-    const colWidths = Object.keys(data[0] || {}).map(key => ({
-      wch: Math.max(key.length, ...data.map(row => String(row[key] || '').length)) + 2
-    }));
-    worksheet['!cols'] = colWidths;
-    
-    XLSX.writeFile(workbook, `${filename}.xlsx`);
-    return true;
-  } catch (error) {
-    console.error('Failed to export Excel file:', error);
-    return false;
-  }
-};
-
-/**
- * Read multiple sheets from an Excel file
+ * Read all sheets from the finance workbook
  * @param {File} file - File object
- * @returns {Promise<Object>} Object with sheet names as keys and data arrays as values
+ * @returns {Promise<Object>} Object with sheet data keyed by sheet name
  */
-export const readExcelSheets = async (file) => {
+export const readFinanceWorkbook = async (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
@@ -85,12 +60,21 @@ export const readExcelSheets = async (file) => {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         
-        const sheets = {};
-        workbook.SheetNames.forEach(name => {
-          sheets[name] = XLSX.utils.sheet_to_json(workbook.Sheets[name], { defval: '' });
+        const result = {};
+        
+        // Read each expected sheet
+        Object.values(SHEET_NAMES).forEach(sheetName => {
+          if (workbook.Sheets[sheetName]) {
+            result[sheetName] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { 
+              defval: '',
+              raw: false 
+            });
+          } else {
+            result[sheetName] = [];
+          }
         });
         
-        resolve(sheets);
+        resolve(result);
       } catch (error) {
         reject(new Error(`Failed to read Excel file: ${error.message}`));
       }
@@ -99,6 +83,40 @@ export const readExcelSheets = async (file) => {
     reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsArrayBuffer(file);
   });
+};
+
+/**
+ * Export data to Excel file
+ * @param {Object} data - Object with sheet names as keys and data arrays as values
+ * @param {string} filename - Output filename (without extension)
+ */
+export const exportToExcel = (data, filename = 'finance-data') => {
+  try {
+    const workbook = XLSX.utils.book_new();
+    
+    Object.entries(data).forEach(([sheetName, sheetData]) => {
+      if (sheetData && sheetData.length > 0) {
+        const worksheet = XLSX.utils.json_to_sheet(sheetData);
+        
+        // Auto-size columns based on defined schema
+        const columns = SHEET_COLUMNS[sheetName];
+        if (columns) {
+          const colWidths = columns.map(col => ({
+            wch: Math.max(col.length, ...sheetData.map(row => String(row[col] || '').length)) + 2
+          }));
+          worksheet['!cols'] = colWidths;
+        }
+        
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      }
+    });
+    
+    XLSX.writeFile(workbook, `${filename}.xlsx`);
+    return true;
+  } catch (error) {
+    console.error('Failed to export Excel file:', error);
+    return false;
+  }
 };
 
 /**
@@ -126,12 +144,12 @@ export const getSheetNames = async (file) => {
 };
 
 /**
- * Validate Excel data structure
+ * Validate Excel data structure for a specific sheet
  * @param {Array} data - Data to validate
- * @param {string[]} requiredColumns - Required column names
+ * @param {string} sheetName - Sheet name to validate against
  * @returns {{ valid: boolean, errors: string[] }}
  */
-export const validateExcelData = (data, requiredColumns = []) => {
+export const validateSheetData = (data, sheetName) => {
   const errors = [];
   
   if (!Array.isArray(data)) {
@@ -144,6 +162,7 @@ export const validateExcelData = (data, requiredColumns = []) => {
     return { valid: false, errors };
   }
   
+  const requiredColumns = getRequiredColumns(sheetName);
   const columns = Object.keys(data[0]);
   
   requiredColumns.forEach(col => {
@@ -153,4 +172,39 @@ export const validateExcelData = (data, requiredColumns = []) => {
   });
   
   return { valid: errors.length === 0, errors };
+};
+
+/**
+ * Create an empty workbook template with all required sheets and headers
+ * @returns {Object} XLSX workbook object
+ */
+export const createEmptyTemplate = () => {
+  const workbook = XLSX.utils.book_new();
+  
+  Object.entries(SHEET_COLUMNS).forEach(([sheetName, columns]) => {
+    // Create header row
+    const headerRow = {};
+    columns.forEach(col => {
+      headerRow[col] = col;
+    });
+    
+    const worksheet = XLSX.utils.json_to_sheet([headerRow]);
+    
+    // Auto-size columns
+    const colWidths = columns.map(col => ({ wch: col.length + 4 }));
+    worksheet['!cols'] = colWidths;
+    
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  });
+  
+  return workbook;
+};
+
+/**
+ * Download an empty template Excel file
+ * @param {string} filename - Output filename
+ */
+export const downloadTemplate = (filename = 'finance-template') => {
+  const workbook = createEmptyTemplate();
+  XLSX.writeFile(workbook, `${filename}.xlsx`);
 };

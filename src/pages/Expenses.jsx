@@ -3,12 +3,22 @@ import { Plus, Upload, Download } from 'lucide-react';
 import { useFinance } from '../hooks/useFinance';
 import { PageHeader, Button } from '../components/common';
 import { ExpenseFilters, ExpenseTable } from '../components/expenses';
+import { searchExpenses, filterByCategory } from '../services/expenseService';
 
 function Expenses() {
   const { expenses } = useFinance();
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [period, setPeriod] = useState('month');
+
+  // Apply filters
+  let filteredExpenses = expenses;
+  if (searchQuery) {
+    filteredExpenses = searchExpenses(filteredExpenses, searchQuery);
+  }
+  if (category !== 'all') {
+    filteredExpenses = filterByCategory(filteredExpenses, category);
+  }
 
   return (
     <div className="space-y-6">
@@ -39,7 +49,7 @@ function Expenses() {
       />
 
       {/* Expense Table */}
-      <ExpenseTable expenses={expenses} />
+      <ExpenseTable expenses={filteredExpenses} />
     </div>
   );
 }

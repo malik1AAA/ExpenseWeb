@@ -1,26 +1,30 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { sampleExpenses, sampleIncome } from '../../data/sampleData';
+import { useFinance } from '../../hooks/useFinance';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { format, parseISO } from 'date-fns';
+import { COLUMNS } from '../../config/excelSchema';
+
+const COL = COLUMNS.EXPENSES;
 
 /**
  * TrendsChart - Monthly trends chart using Recharts
  */
 function TrendsChart() {
-  // Group transactions by month for the chart
+  const { expenses } = useFinance();
+
+  // Group expenses by month for the chart
   const monthlyData = {};
   
-  [...sampleExpenses, ...sampleIncome].forEach(transaction => {
-    const month = format(parseISO(transaction.date), 'MMM');
+  expenses.forEach(expense => {
+    const dateStr = expense[COL.DATE];
+    if (!dateStr) return;
+    
+    const month = format(parseISO(dateStr), 'MMM');
     if (!monthlyData[month]) {
-      monthlyData[month] = { month, income: 0, expenses: 0 };
+      monthlyData[month] = { month, expenses: 0 };
     }
     
-    if (transaction.type === 'income') {
-      monthlyData[month].income += transaction.amount;
-    } else {
-      monthlyData[month].expenses += transaction.amount;
-    }
+    monthlyData[month].expenses += expense[COL.AMOUNT];
   });
 
   const chartData = Object.values(monthlyData);
@@ -59,14 +63,6 @@ function TrendsChart() {
                 }}
               />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="income" 
-                stroke="#10b981" 
-                strokeWidth={2}
-                dot={{ fill: '#10b981', r: 4 }}
-                name="Income"
-              />
               <Line 
                 type="monotone" 
                 dataKey="expenses" 

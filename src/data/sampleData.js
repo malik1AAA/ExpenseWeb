@@ -1,119 +1,204 @@
 /**
- * Sample data for the finance application
- * Used for development and demo purposes
+ * Sample Data for Finance Application
+ * This data matches the Excel schema and is used when no Excel file is uploaded
  */
 
+import { 
+  COLUMNS, 
+  DEBT_DIRECTION, 
+  DEBT_CATEGORY, 
+  CATEGORY_TYPE,
+  PAYMENT_METHODS 
+} from '../config/excelSchema';
+
+// Sample Categories
 export const sampleCategories = [
-  { id: 'food', name: 'Food & Dining', icon: '🍔', color: '#f97316' },
-  { id: 'transport', name: 'Transportation', icon: '🚗', color: '#3b82f6' },
-  { id: 'housing', name: 'Housing', icon: '🏠', color: '#8b5cf6' },
-  { id: 'utilities', name: 'Utilities', icon: '💡', color: '#eab308' },
-  { id: 'entertainment', name: 'Entertainment', icon: '🎬', color: '#ec4899' },
-  { id: 'healthcare', name: 'Healthcare', icon: '🏥', color: '#10b981' },
-  { id: 'shopping', name: 'Shopping', icon: '🛍️', color: '#6366f1' },
-  { id: 'education', name: 'Education', icon: '📚', color: '#14b8a6' },
-  { id: 'salary', name: 'Salary', icon: '💰', color: '#22c55e' },
-  { id: 'other', name: 'Other', icon: '📦', color: '#64748b' },
+  {
+    [COLUMNS.CATEGORIES.CATEGORY_ID]: 'food',
+    [COLUMNS.CATEGORIES.CATEGORY_NAME]: 'Food & Dining',
+    [COLUMNS.CATEGORIES.TYPE]: CATEGORY_TYPE.EXPENSE,
+  },
+  {
+    [COLUMNS.CATEGORIES.CATEGORY_ID]: 'transport',
+    [COLUMNS.CATEGORIES.CATEGORY_NAME]: 'Transportation',
+    [COLUMNS.CATEGORIES.TYPE]: CATEGORY_TYPE.EXPENSE,
+  },
+  {
+    [COLUMNS.CATEGORIES.CATEGORY_ID]: 'housing',
+    [COLUMNS.CATEGORIES.CATEGORY_NAME]: 'Housing',
+    [COLUMNS.CATEGORIES.TYPE]: CATEGORY_TYPE.EXPENSE,
+  },
+  {
+    [COLUMNS.CATEGORIES.CATEGORY_ID]: 'utilities',
+    [COLUMNS.CATEGORIES.CATEGORY_NAME]: 'Utilities',
+    [COLUMNS.CATEGORIES.TYPE]: CATEGORY_TYPE.EXPENSE,
+  },
+  {
+    [COLUMNS.CATEGORIES.CATEGORY_ID]: 'entertainment',
+    [COLUMNS.CATEGORIES.CATEGORY_NAME]: 'Entertainment',
+    [COLUMNS.CATEGORIES.TYPE]: CATEGORY_TYPE.EXPENSE,
+  },
+  {
+    [COLUMNS.CATEGORIES.CATEGORY_ID]: 'healthcare',
+    [COLUMNS.CATEGORIES.CATEGORY_NAME]: 'Healthcare',
+    [COLUMNS.CATEGORIES.TYPE]: CATEGORY_TYPE.EXPENSE,
+  },
+  {
+    [COLUMNS.CATEGORIES.CATEGORY_ID]: 'shopping',
+    [COLUMNS.CATEGORIES.CATEGORY_NAME]: 'Shopping',
+    [COLUMNS.CATEGORIES.TYPE]: CATEGORY_TYPE.EXPENSE,
+  },
+  {
+    [COLUMNS.CATEGORIES.CATEGORY_ID]: 'education',
+    [COLUMNS.CATEGORIES.CATEGORY_NAME]: 'Education',
+    [COLUMNS.CATEGORIES.TYPE]: CATEGORY_TYPE.EXPENSE,
+  },
 ];
 
+// Sample Expenses
 export const sampleExpenses = [
   {
-    id: '1',
-    date: '2024-01-15',
-    description: 'Grocery Store',
-    category: 'food',
-    amount: 85.50,
-    type: 'expense',
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP001',
+    [COLUMNS.EXPENSES.DATE]: '2024-01-15',
+    [COLUMNS.EXPENSES.DESCRIPTION]: 'Grocery Store',
+    [COLUMNS.EXPENSES.CATEGORY]: 'food',
+    [COLUMNS.EXPENSES.AMOUNT]: 85.50,
+    [COLUMNS.EXPENSES.PAYMENT_METHOD]: PAYMENT_METHODS.DEBIT_CARD,
+    [COLUMNS.EXPENSES.NOTES]: 'Weekly groceries',
   },
   {
-    id: '2',
-    date: '2024-01-14',
-    description: 'Gas Station',
-    category: 'transport',
-    amount: 45.00,
-    type: 'expense',
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP002',
+    [COLUMNS.EXPENSES.DATE]: '2024-01-14',
+    [COLUMNS.EXPENSES.DESCRIPTION]: 'Gas Station',
+    [COLUMNS.EXPENSES.CATEGORY]: 'transport',
+    [COLUMNS.EXPENSES.AMOUNT]: 45.00,
+    [COLUMNS.EXPENSES.PAYMENT_METHOD]: PAYMENT_METHODS.CREDIT_CARD,
+    [COLUMNS.EXPENSES.NOTES]: '',
   },
   {
-    id: '3',
-    date: '2024-01-13',
-    description: 'Monthly Rent',
-    category: 'housing',
-    amount: 1200.00,
-    type: 'expense',
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP003',
+    [COLUMNS.EXPENSES.DATE]: '2024-01-13',
+    [COLUMNS.EXPENSES.DESCRIPTION]: 'Monthly Rent',
+    [COLUMNS.EXPENSES.CATEGORY]: 'housing',
+    [COLUMNS.EXPENSES.AMOUNT]: 1200.00,
+    [COLUMNS.EXPENSES.PAYMENT_METHOD]: PAYMENT_METHODS.BANK_TRANSFER,
+    [COLUMNS.EXPENSES.NOTES]: 'January rent',
   },
   {
-    id: '4',
-    date: '2024-01-12',
-    description: 'Electric Bill',
-    category: 'utilities',
-    amount: 120.00,
-    type: 'expense',
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP004',
+    [COLUMNS.EXPENSES.DATE]: '2024-01-12',
+    [COLUMNS.EXPENSES.DESCRIPTION]: 'Electric Bill',
+    [COLUMNS.EXPENSES.CATEGORY]: 'utilities',
+    [COLUMNS.EXPENSES.AMOUNT]: 120.00,
+    [COLUMNS.EXPENSES.PAYMENT_METHOD]: PAYMENT_METHODS.BANK_TRANSFER,
+    [COLUMNS.EXPENSES.NOTES]: '',
   },
   {
-    id: '5',
-    date: '2024-01-11',
-    description: 'Movie Tickets',
-    category: 'entertainment',
-    amount: 32.00,
-    type: 'expense',
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP005',
+    [COLUMNS.EXPENSES.DATE]: '2024-01-11',
+    [COLUMNS.EXPENSES.DESCRIPTION]: 'Movie Tickets',
+    [COLUMNS.EXPENSES.CATEGORY]: 'entertainment',
+    [COLUMNS.EXPENSES.AMOUNT]: 32.00,
+    [COLUMNS.EXPENSES.PAYMENT_METHOD]: PAYMENT_METHODS.CASH,
+    [COLUMNS.EXPENSES.NOTES]: 'Weekend movie',
+  },
+  {
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP006',
+    [COLUMNS.EXPENSES.DATE]: '2024-01-10',
+    [COLUMNS.EXPENSES.DESCRIPTION]: 'Restaurant Dinner',
+    [COLUMNS.EXPENSES.CATEGORY]: 'food',
+    [COLUMNS.EXPENSES.AMOUNT]: 68.00,
+    [COLUMNS.EXPENSES.PAYMENT_METHOD]: PAYMENT_METHODS.CREDIT_CARD,
+    [COLUMNS.EXPENSES.NOTES]: 'Birthday dinner',
   },
 ];
 
-export const sampleIncome = [
-  {
-    id: '101',
-    date: '2024-01-01',
-    description: 'Monthly Salary',
-    category: 'salary',
-    amount: 5000.00,
-    type: 'income',
-  },
-];
-
+// Sample Debts
 export const sampleDebts = [
   {
-    id: 'd1',
-    name: 'Student Loan',
-    totalAmount: 25000,
-    remainingAmount: 18500,
-    monthlyPayment: 350,
-    interestRate: 4.5,
-    dueDate: '2024-01-28',
-    status: 'active',
+    [COLUMNS.DEBTS.DEBT_ID]: 'DEBT001',
+    [COLUMNS.DEBTS.PERSON]: 'John Smith',
+    [COLUMNS.DEBTS.DEBT_CATEGORY]: DEBT_CATEGORY.CASH,
+    [COLUMNS.DEBTS.DIRECTION]: DEBT_DIRECTION.LENT,
+    [COLUMNS.DEBTS.ORIGINAL_AMOUNT]: 500.00,
+    [COLUMNS.DEBTS.DATE]: '2024-01-05',
+    [COLUMNS.DEBTS.DUE_DATE]: '2024-02-05',
+    [COLUMNS.DEBTS.NOTES]: 'Emergency loan',
   },
   {
-    id: 'd2',
-    name: 'Credit Card',
-    totalAmount: 5000,
-    remainingAmount: 1200,
-    monthlyPayment: 200,
-    interestRate: 18.9,
-    dueDate: '2024-01-25',
-    status: 'active',
+    [COLUMNS.DEBTS.DEBT_ID]: 'DEBT002',
+    [COLUMNS.DEBTS.PERSON]: 'Sarah Johnson',
+    [COLUMNS.DEBTS.DEBT_CATEGORY]: DEBT_CATEGORY.FOOD,
+    [COLUMNS.DEBTS.DIRECTION]: DEBT_DIRECTION.BORROWED,
+    [COLUMNS.DEBTS.ORIGINAL_AMOUNT]: 75.00,
+    [COLUMNS.DEBTS.DATE]: '2024-01-08',
+    [COLUMNS.DEBTS.DUE_DATE]: '2024-01-22',
+    [COLUMNS.DEBTS.NOTES]: 'Grocery money',
+  },
+  {
+    [COLUMNS.DEBTS.DEBT_ID]: 'DEBT003',
+    [COLUMNS.DEBTS.PERSON]: 'Mike Davis',
+    [COLUMNS.DEBTS.DEBT_CATEGORY]: DEBT_CATEGORY.CASH,
+    [COLUMNS.DEBTS.DIRECTION]: DEBT_DIRECTION.LENT,
+    [COLUMNS.DEBTS.ORIGINAL_AMOUNT]: 200.00,
+    [COLUMNS.DEBTS.DATE]: '2024-01-03',
+    [COLUMNS.DEBTS.DUE_DATE]: '2024-03-03',
+    [COLUMNS.DEBTS.NOTES]: '',
   },
 ];
 
-export const sampleTransactions = [
-  ...sampleExpenses,
-  ...sampleIncome,
+// Sample Debt Returns
+export const sampleDebtReturns = [
+  {
+    [COLUMNS.DEBT_RETURNS.RETURN_ID]: 'RET001',
+    [COLUMNS.DEBT_RETURNS.DEBT_ID]: 'DEBT001',
+    [COLUMNS.DEBT_RETURNS.DATE]: '2024-01-20',
+    [COLUMNS.DEBT_RETURNS.AMOUNT]: 250.00,
+    [COLUMNS.DEBT_RETURNS.NOTES]: 'Partial payment',
+  },
+  {
+    [COLUMNS.DEBT_RETURNS.RETURN_ID]: 'RET002',
+    [COLUMNS.DEBT_RETURNS.DEBT_ID]: 'DEBT002',
+    [COLUMNS.DEBT_RETURNS.DATE]: '2024-01-15',
+    [COLUMNS.DEBT_RETURNS.AMOUNT]: 75.00,
+    [COLUMNS.DEBT_RETURNS.NOTES]: 'Full payment',
+  },
 ];
 
 /**
- * Get category by ID
+ * Get category name by ID
  * @param {string} categoryId - Category ID
- * @returns {object|undefined} Category object
+ * @returns {string} Category name
  */
-export const getCategoryById = (categoryId) => {
-  return sampleCategories.find(cat => cat.id === categoryId);
+export const getCategoryName = (categoryId) => {
+  const category = sampleCategories.find(
+    cat => cat[COLUMNS.CATEGORIES.CATEGORY_ID] === categoryId
+  );
+  return category ? category[COLUMNS.CATEGORIES.CATEGORY_NAME] : categoryId;
 };
 
 /**
- * Get all category options for select inputs
- * @returns {Array} Array of { value, label } objects
+ * Get all category options for dropdowns
+ * @returns {Array<{value: string, label: string}>}
  */
 export const getCategoryOptions = () => {
   return sampleCategories.map(cat => ({
-    value: cat.id,
-    label: cat.name,
+    value: cat[COLUMNS.CATEGORIES.CATEGORY_ID],
+    label: cat[COLUMNS.CATEGORIES.CATEGORY_NAME],
   }));
+};
+
+/**
+ * Calculate remaining debt amount
+ * @param {Object} debt - Debt object
+ * @param {Array} returns - All debt returns
+ * @returns {number} Remaining amount
+ */
+export const calculateRemainingDebt = (debt, returns = sampleDebtReturns) => {
+  const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+  const totalReturned = returns
+    .filter(ret => ret[COLUMNS.DEBT_RETURNS.DEBT_ID] === debtId)
+    .reduce((sum, ret) => sum + ret[COLUMNS.DEBT_RETURNS.AMOUNT], 0);
+  
+  return debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] - totalReturned;
 };

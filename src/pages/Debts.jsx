@@ -4,7 +4,7 @@ import { PageHeader, Button } from '../components/common';
 import { DebtSummaryCards, DebtList } from '../components/debts';
 
 function Debts() {
-  const { totalDebt, activeDebts } = useFinance();
+  const { debts } = useFinance();
 
   return (
     <div className="space-y-6">
@@ -19,14 +19,10 @@ function Debts() {
       </PageHeader>
 
       {/* Summary Cards */}
-      <DebtSummaryCards
-        totalDebt={totalDebt}
-        dueThisMonth={0}
-        paidOff={0}
-      />
+      <DebtSummaryCards />
 
       {/* Debts List */}
-      <DebtList debts={activeDebts} />
+      <DebtList debts={debts} />
 
       {/* Info Card */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
