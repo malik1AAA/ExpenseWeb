@@ -1,136 +1,302 @@
 /**
- * Calculation Service - Financial calculations and aggregations
+ * Calculation Service - Pure functions for financial calculations
+ * 
+ * All functions are pure (no side effects, don't mutate inputs).
+ * Uses the Excel schema column definitions for field access.
  */
 
 import { COLUMNS } from '../config/excelSchema';
+import { parseISO, getYear, getMonth, isValid } from 'date-fns';
 
-const EXP_COL = COLUMNS.EXPENSES;
-const CAT_COL = COLUMNS.CATEGORIES;
+// Field references from schema
+const DATE_FIELD = COLUMNS.EXPENSES.DATE;
+const AMOUNT_FIELD = COLUMNS.EXPENSES.AMOUNT;
+const CATEGORY_FIELD = COLUMNS.EXPENSES.CATEGORY;
 
 /**
- * Calculate total amount from array of transactions
- * @param {Array} transactions - Array of transaction objects
- * @param {string} amountField - Field name for amount (default: EXP_COL.AMOUNT)
+ * Parse a date string to Date object
+ * @param {string} dateStr - ISO date string (YYYY-MM-DD)
+ * @returns {Date|null} Parsed date or null if invalid
+ */
+const parseDate = (dateStr) => {
+  if (!dateStr) return null;
+  try {
+    const date = parseISO(dateStr);
+    return isValid(date) ? date : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Check if an expense matches a specific year and month
+ * @param {Object} expense - Expense object
+ * @param {number} year - Year to match
+ * @param {number} month - Month to match (0-11)
+ * @returns {boolean}
+ */
+const matchesYearMonth = (expense, year, month) => {
+  const date = parseDate(expense[DATE_FIELD]);
+  if (!date) return false;
+  return getYear(date) === year && getMonth(date) === month;
+};
+
+/**
+ * Check if an expense matches a specific year
+ * @param {Object} expense - Expense object
+ * @param {number} year - Year to match
+ * @returns {boolean}
+ */
+const matchesYear = (expense, year) => {
+  const date = parseDate(expense[DATE_FIELD]);
+  if (!date) return false;
+  return getYear(date) === year;
+};
+
+/**
+ * Safely convert a value to a number
+ * @param {*} value - Value to convert
+ * @returns {number} Number or 0 if invalid
+ */
+const toNumber = (value) => {
+  const num = Number(value);
+  return isNaN(num) ? 0 : num;
+};
+
+// ============================================================================
+// CORE CALCULATION FUNCTIONS
+// ============================================================================
+
+/**
+ * Get total expenses (sum of all amounts)
+ * @param {Array} expenses - Array of expense objects
  * @returns {number} Total amount
  */
-export const calculateTotal = (transactions, amountField = EXP_COL.AMOUNT) => {
-  return transactions.reduce((sum, t) => sum + (Number(t[amountField]) || 0), 0);
+export const getTotalExpenses = (expenses) => {
+  if (!Array.isArray(expenses) || expenses.length === 0) return 0;
+  
+  return expenses.reduce((sum, expense) => {
+    return sum + toNumber(expense[AMOUNT_FIELD]);
+  }, 0);
 };
 
 /**
- * Calculate total expenses
+ * Get expenses for a specific month
  * @param {Array} expenses - Array of expense objects
- * @returns {number} Total expenses
+ * @param {number} year - Year
+ * @param {number} month - Month (0-11, where 0 = January)
+ * @returns {Array} Filtered expenses for the month
  */
-export const calculateTotalExpenses = (expenses) => {
-  return expenses.reduce((sum, t) => sum + (Number(t[EXP_COL.AMOUNT]) || 0), 0);
+export const getExpensesForMonth = (expenses, year, month) => {
+  if (!Array.isArray(expenses) || expenses.length === 0) return [];
+  if (year === undefined || month === undefined) return [];
+  
+  return expenses.filter((expense) => matchesYearMonth(expense, year, month));
 };
 
 /**
- * Group expenses by category
+ * Get total amount for a specific month
  * @param {Array} expenses - Array of expense objects
+ * @param {number} year - Year
+ * @param {number} month - Month (0-11)
+ * @returns {number} Total amount for the month
+ */
+export const getMonthlyTotal = (expenses, year, month) => {
+  const monthExpenses = getExpensesForMonth(expenses, year, month);
+  return getTotalExpenses(monthExpenses);
+};
+
+/**
+ * Get total amount for a specific year
+ * @param {Array} expenses - Array of expense objects
+ * @param {number} year - Year
+ * @returns {number} Total amount for the year
+ */
+export const getAnnualTotal = (expenses, year) => {
+  if (!Array.isArray(expenses) || expenses.length === 0) return 0;
+  if (year === undefined) return 0;
+  
+  return expenses.reduce((sum, expense) => {
+    if (matchesYear(expense, year)) {
+      return sum + toNumber(expense[AMOUNT_FIELD]);
+    }
+    return sum;
+  }, 0);
+};
+
+/**
+ * Get totals grouped by category for a specific month
+ * @param {Array} expenses - Array of expense objects
+ * @param {number} year - Year
+ * @param {number} month - Month (0-11)
  * @returns {Object} Object with category IDs as keys and totals as values
  */
-export const groupByCategory = (expenses) => {
-  return expenses.reduce((groups, t) => {
-    const category = t[EXP_COL.CATEGORY] || 'other';
-    if (!groups[category]) {
-      groups[category] = 0;
+export const getCategoryTotals = (expenses, year, month) => {
+  const monthExpenses = getExpensesForMonth(expenses, year, month);
+  
+  if (monthExpenses.length === 0) return {};
+  
+  return monthExpenses.reduce((totals, expense) => {
+    const category = expense[CATEGORY_FIELD] || 'uncategorized';
+    const amount = toNumber(expense[AMOUNT_FIELD]);
+    
+    if (!totals[category]) {
+      totals[category] = 0;
     }
-    groups[category] += Number(t[EXP_COL.AMOUNT]) || 0;
-    return groups;
+    totals[category] += amount;
+    
+    return totals;
   }, {});
 };
 
 /**
- * Group expenses by date
+ * Get totals grouped by category for a specific year
  * @param {Array} expenses - Array of expense objects
- * @returns {Object} Object with dates as keys and arrays of expenses as values
+ * @param {number} year - Year
+ * @returns {Object} Object with category IDs as keys and totals as values
  */
-export const groupByDate = (expenses) => {
-  return expenses.reduce((groups, t) => {
-    const date = t[EXP_COL.DATE];
-    if (!groups[date]) {
-      groups[date] = [];
+export const getAnnualCategoryTotals = (expenses, year) => {
+  if (!Array.isArray(expenses) || expenses.length === 0) return {};
+  if (year === undefined) return {};
+  
+  return expenses.reduce((totals, expense) => {
+    if (matchesYear(expense, year)) {
+      const category = expense[CATEGORY_FIELD] || 'uncategorized';
+      const amount = toNumber(expense[AMOUNT_FIELD]);
+      
+      if (!totals[category]) {
+        totals[category] = 0;
+      }
+      totals[category] += amount;
     }
-    groups[date].push(t);
-    return groups;
+    return totals;
   }, {});
 };
 
 /**
- * Group expenses by month
+ * Get monthly totals for all 12 months of a year
+ * Returns an array of 12 objects, one for each month
  * @param {Array} expenses - Array of expense objects
- * @returns {Object} Object with month keys (YYYY-MM) and totals
+ * @param {number} year - Year
+ * @returns {Array} Array of { month: number, total: number } objects
  */
-export const groupByMonth = (expenses) => {
-  return expenses.reduce((groups, t) => {
-    const month = t[EXP_COL.DATE] ? t[EXP_COL.DATE].substring(0, 7) : 'unknown';
-    if (!groups[month]) {
-      groups[month] = { total: 0, expenses: [] };
+export const getMonthlyTotalsForYear = (expenses, year) => {
+  if (year === undefined) {
+    return Array.from({ length: 12 }, (_, i) => ({ month: i, total: 0 }));
+  }
+  
+  return Array.from({ length: 12 }, (_, month) => ({
+    month,
+    total: getMonthlyTotal(expenses, year, month),
+  }));
+};
+
+/**
+ * Get the category with highest spending for a specific month
+ * @param {Array} expenses - Array of expense objects
+ * @param {number} year - Year
+ * @param {number} month - Month (0-11)
+ * @returns {{ category: string, total: number } | null} Highest category or null if no data
+ */
+export const getHighestSpendingCategory = (expenses, year, month) => {
+  const categoryTotals = getCategoryTotals(expenses, year, month);
+  
+  if (Object.keys(categoryTotals).length === 0) return null;
+  
+  let highestCategory = null;
+  let highestTotal = -Infinity;
+  
+  Object.entries(categoryTotals).forEach(([category, total]) => {
+    if (total > highestTotal) {
+      highestTotal = total;
+      highestCategory = category;
     }
-    groups[month].total += Number(t[EXP_COL.AMOUNT]) || 0;
-    groups[month].expenses.push(t);
-    return groups;
-  }, {});
+  });
+  
+  return {
+    category: highestCategory,
+    total: highestTotal,
+  };
 };
 
 /**
- * Calculate average daily spending
+ * Get average monthly spending for a year
+ * Calculates average across all 12 months (including months with 0 spending)
  * @param {Array} expenses - Array of expense objects
- * @param {number} days - Number of days to average over
- * @returns {number} Average daily spending
+ * @param {number} year - Year
+ * @returns {number} Average monthly spending
  */
-export const calculateAverageDaily = (expenses, days = 30) => {
-  if (days === 0) return 0;
-  const total = calculateTotalExpenses(expenses);
-  return total / days;
+export const getAverageMonthlySpending = (expenses, year) => {
+  const annualTotal = getAnnualTotal(expenses, year);
+  
+  // Always divide by 12 months, even if some months have no expenses
+  return annualTotal / 12;
 };
 
 /**
- * Find highest expense
+ * Get count of expenses
  * @param {Array} expenses - Array of expense objects
- * @returns {Object|null} Expense with highest amount
+ * @returns {number} Number of expenses
  */
-export const findHighestExpense = (expenses) => {
-  if (expenses.length === 0) return null;
-  return expenses.reduce((max, t) => 
-    Number(t[EXP_COL.AMOUNT]) > Number(max[EXP_COL.AMOUNT]) ? t : max
-  );
+export const getExpenseCount = (expenses) => {
+  if (!Array.isArray(expenses)) return 0;
+  return expenses.length;
 };
 
+// ============================================================================
+// ADDITIONAL HELPER FUNCTIONS
+// ============================================================================
+
 /**
- * Get top categories by spending
+ * Get unique years from expenses
  * @param {Array} expenses - Array of expense objects
- * @param {number} limit - Number of top categories to return
- * @returns {Array} Array of { category, total } objects sorted by total
+ * @returns {Array<number>} Sorted array of unique years (descending)
  */
-export const getTopCategories = (expenses, limit = 5) => {
-  const grouped = groupByCategory(expenses);
-  return Object.entries(grouped)
-    .map(([category, total]) => ({ category, total }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, limit);
+export const getAvailableYears = (expenses) => {
+  if (!Array.isArray(expenses) || expenses.length === 0) return [];
+  
+  const years = new Set();
+  
+  expenses.forEach((expense) => {
+    const date = parseDate(expense[DATE_FIELD]);
+    if (date) {
+      years.add(getYear(date));
+    }
+  });
+  
+  return Array.from(years).sort((a, b) => b - a); // Descending order
 };
 
 /**
- * Calculate percentage of total
- * @param {number} value - Value to calculate percentage for
- * @param {number} total - Total value
- * @returns {number} Percentage (0-100)
+ * Get current year and month
+ * @returns {{ year: number, month: number }}
  */
-export const calculatePercentage = (value, total) => {
-  if (total === 0) return 0;
-  return (value / total) * 100;
+export const getCurrentYearMonth = () => {
+  const now = new Date();
+  return {
+    year: getYear(now),
+    month: getMonth(now),
+  };
 };
 
 /**
- * Get category name from categories list
- * @param {Array} categories - Array of category objects
- * @param {string} categoryId - Category ID
- * @returns {string} Category name
+ * Get month name from month number
+ * @param {number} month - Month (0-11)
+ * @param {string} locale - Locale (default: 'en-US')
+ * @returns {string} Month name
  */
-export const getCategoryName = (categories, categoryId) => {
-  const category = categories.find(cat => cat[CAT_COL.CATEGORY_ID] === categoryId);
-  return category ? category[CAT_COL.CATEGORY_NAME] : categoryId;
+export const getMonthName = (month, locale = 'en-US') => {
+  const date = new Date(2000, month, 1);
+  return date.toLocaleString(locale, { month: 'long' });
+};
+
+/**
+ * Get short month name from month number
+ * @param {number} month - Month (0-11)
+ * @param {string} locale - Locale (default: 'en-US')
+ * @returns {string} Short month name
+ */
+export const getShortMonthName = (month, locale = 'en-US') => {
+  const date = new Date(2000, month, 1);
+  return date.toLocaleString(locale, { month: 'short' });
 };

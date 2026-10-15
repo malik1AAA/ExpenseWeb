@@ -1,10 +1,9 @@
 import { useContext, useMemo } from 'react';
 import { FinanceContext } from '../context/FinanceContext';
 import {
-  calculateTotalExpenses,
-  groupByCategory,
-  getTopCategories,
-  getCategoryName as getCategoryNameFromList,
+  getTotalExpenses,
+  getCategoryTotals,
+  getCurrentYearMonth,
 } from '../services/calculationService';
 import { calculateRemainingDebt, calculateDebtSummary } from '../services/debtService';
 import { COLUMNS } from '../config/excelSchema';
@@ -43,19 +42,24 @@ export function useFinance() {
   // ---------------------------------------------------------------------------
 
   const totalExpenses = useMemo(
-    () => calculateTotalExpenses(expenses),
+    () => getTotalExpenses(expenses),
     [expenses]
   );
+
+  const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
 
   const categoryBreakdown = useMemo(
-    () => groupByCategory(expenses),
-    [expenses]
+    () => getCategoryTotals(expenses, currentYear, currentMonth),
+    [expenses, currentYear, currentMonth]
   );
 
-  const topCategories = useMemo(
-    () => getTopCategories(expenses, 5),
-    [expenses]
-  );
+  const topCategories = useMemo(() => {
+    const totals = getCategoryTotals(expenses, currentYear, currentMonth);
+    return Object.entries(totals)
+      .map(([category, total]) => ({ category, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+  }, [expenses, currentYear, currentMonth]);
 
   const recentExpenses = useMemo(
     () =>
@@ -84,7 +88,10 @@ export function useFinance() {
    * @returns {string}
    */
   const getCategoryName = (categoryId) => {
-    return getCategoryNameFromList(categories, categoryId);
+    const category = categories.find(
+      (c) => c[COLUMNS.CATEGORIES.CATEGORY_ID] === categoryId
+    );
+    return category ? category[COLUMNS.CATEGORIES.CATEGORY_NAME] : categoryId;
   };
 
   /**
