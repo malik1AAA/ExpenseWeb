@@ -3,8 +3,14 @@ import { readExcelFile, exportToExcel } from '../services/excelService';
 import { COLUMNS } from '../config/excelSchema';
 
 /**
- * Custom hook for Excel import/export operations
- * Handles file selection, validation, duplicate detection, and data loading
+ * useExcelImport - Custom hook for Excel import/export operations
+ *
+ * Handles:
+ *   - File selection and validation
+ *   - Duplicate detection
+ *   - Calling importFinanceData to update context
+ *   - Export to Excel
+ *   - Loading states and error/warning messages
  */
 export function useExcelImport({ onImportSuccess } = {}) {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -62,200 +68,180 @@ export function useExcelImport({ onImportSuccess } = {}) {
 
   /**
    * Import the selected Excel file
-   * @param {Object} context - Finance context with update functions
-   * @returns {Promise<Object>} Import result with counts and messages
+   * @param {Function} importFinanceData - Context function to replace all data
+   * @returns {Promise<Object|null>} Import result summary or null on failure
    */
-  const handleImport = useCallback(async (context) => {
-    if (!selectedFile) {
-      setErrors(['Please select a file first']);
-      return null;
-    }
-
-    setIsImporting(true);
-    setErrors([]);
-    setWarnings([]);
-    setImportResult(null);
-
-    try {
-      // Read and parse the Excel file
-      const result = await readExcelFile(selectedFile);
-
-      // Check for critical errors (e.g., invalid file, missing required sheets)
-      if (result.errors && result.errors.length > 0) {
-        setErrors(result.errors);
-        setIsImporting(false);
+  const handleImport = useCallback(
+    async (importFinanceData) => {
+      if (!selectedFile) {
+        setErrors(['Please select a file first']);
         return null;
       }
 
-      // Collect warnings
-      const allWarnings = [...(result.warnings || [])];
-
-      // Detect duplicates in each sheet
-      const expenseDuplicates = detectDuplicates(
-        result.expenses,
-        COLUMNS.EXPENSES.EXPENSE_ID
-      );
-      const debtDuplicates = detectDuplicates(
-        result.debts,
-        COLUMNS.DEBTS.DEBT_ID
-      );
-      const returnDuplicates = detectDuplicates(
-        result.debtReturns,
-        COLUMNS.DEBT_RETURNS.RETURN_ID
-      );
-      const categoryDuplicates = detectDuplicates(
-        result.categories,
-        COLUMNS.CATEGORIES.CATEGORY_ID
-      );
-
-      // Warn about duplicates
-      if (expenseDuplicates.duplicates.length > 0) {
-        allWarnings.push(
-          `Found ${expenseDuplicates.duplicates.length} duplicate expense(s) that were skipped`
-        );
-      }
-      if (debtDuplicates.duplicates.length > 0) {
-        allWarnings.push(
-          `Found ${debtDuplicates.duplicates.length} duplicate debt(s) that were skipped`
-        );
-      }
-      if (returnDuplicates.duplicates.length > 0) {
-        allWarnings.push(
-          `Found ${returnDuplicates.duplicates.length} duplicate debt return(s) that were skipped`
-        );
-      }
-      if (categoryDuplicates.duplicates.length > 0) {
-        allWarnings.push(
-          `Found ${categoryDuplicates.duplicates.length} duplicate category(ies) that were skipped`
-        );
-      }
-
-      setWarnings(allWarnings);
-
-      // Check if workbook is effectively empty
-      const totalRecords =
-        expenseDuplicates.uniqueRecords.length +
-        debtDuplicates.uniqueRecords.length +
-        returnDuplicates.uniqueRecords.length +
-        categoryDuplicates.uniqueRecords.length;
-
-      if (totalRecords === 0) {
-        setErrors([
-          'The workbook is empty. No records were found in any sheet.',
-        ]);
-        setIsImporting(false);
+      if (!importFinanceData || typeof importFinanceData !== 'function') {
+        setErrors(['importFinanceData function is required']);
         return null;
       }
 
-      // Update the context with imported data
-      if (context) {
-        // Replace all data with imported data
-        if (expenseDuplicates.uniqueRecords.length > 0) {
-          context.importExpenses(expenseDuplicates.uniqueRecords, {
-            replace: true,
-          });
-        } else if (context.clearExpenses) {
-          context.clearExpenses();
+      setIsImporting(true);
+      setErrors([]);
+      setWarnings([]);
+      setImportResult(null);
+
+      try {
+        // Read and parse the Excel file
+        const result = await readExcelFile(selectedFile);
+
+        // Check for critical errors (e.g., invalid file, missing required sheets)
+        if (result.errors && result.errors.length > 0) {
+          setErrors(result.errors);
+          setIsImporting(false);
+          return null;
         }
 
-        if (debtDuplicates.uniqueRecords.length > 0) {
-          context.importDebts(debtDuplicates.uniqueRecords, { replace: true });
-        } else if (context.clearDebts) {
-          context.clearDebts();
+        // Collect warnings
+        const allWarnings = [...(result.warnings || [])];
+
+        // Detect duplicates in each sheet
+        const expenseDuplicates = detectDuplicates(
+          result.expenses,
+          COLUMNS.EXPENSES.EXPENSE_ID
+        );
+        const debtDuplicates = detectDuplicates(
+          result.debts,
+          COLUMNS.DEBTS.DEBT_ID
+        );
+        const returnDuplicates = detectDuplicates(
+          result.debtReturns,
+          COLUMNS.DEBT_RETURNS.RETURN_ID
+        );
+        const categoryDuplicates = detectDuplicates(
+          result.categories,
+          COLUMNS.CATEGORIES.CATEGORY_ID
+        );
+
+        // Warn about duplicates
+        if (expenseDuplicates.duplicates.length > 0) {
+          allWarnings.push(
+            `Found ${expenseDuplicates.duplicates.length} duplicate expense(s) that were skipped`
+          );
+        }
+        if (debtDuplicates.duplicates.length > 0) {
+          allWarnings.push(
+            `Found ${debtDuplicates.duplicates.length} duplicate debt(s) that were skipped`
+          );
+        }
+        if (returnDuplicates.duplicates.length > 0) {
+          allWarnings.push(
+            `Found ${returnDuplicates.duplicates.length} duplicate debt return(s) that were skipped`
+          );
+        }
+        if (categoryDuplicates.duplicates.length > 0) {
+          allWarnings.push(
+            `Found ${categoryDuplicates.duplicates.length} duplicate category(ies) that were skipped`
+          );
         }
 
-        if (returnDuplicates.uniqueRecords.length > 0) {
-          context.importDebtReturns(returnDuplicates.uniqueRecords, {
-            replace: true,
-          });
-        } else if (context.clearDebtReturns) {
-          context.clearDebtReturns();
+        setWarnings(allWarnings);
+
+        // Check if workbook is effectively empty
+        const totalRecords =
+          expenseDuplicates.uniqueRecords.length +
+          debtDuplicates.uniqueRecords.length +
+          returnDuplicates.uniqueRecords.length +
+          categoryDuplicates.uniqueRecords.length;
+
+        if (totalRecords === 0) {
+          setErrors([
+            'The workbook is empty. No records were found in any sheet.',
+          ]);
+          setIsImporting(false);
+          return null;
         }
 
-        if (categoryDuplicates.uniqueRecords.length > 0) {
-          context.importCategories(categoryDuplicates.uniqueRecords, {
-            replace: true,
-          });
-        } else if (context.clearCategories) {
-          context.clearCategories();
+        // Call the unified import function with all data at once
+        importFinanceData({
+          expenses: expenseDuplicates.uniqueRecords,
+          debts: debtDuplicates.uniqueRecords,
+          debtReturns: returnDuplicates.uniqueRecords,
+          categories: categoryDuplicates.uniqueRecords,
+          fileName: selectedFile.name,
+        });
+
+        // Build the result summary
+        const summary = {
+          fileName: selectedFile.name,
+          fileSize: selectedFile.size,
+          expenses: expenseDuplicates.uniqueRecords.length,
+          debts: debtDuplicates.uniqueRecords.length,
+          debtReturns: returnDuplicates.uniqueRecords.length,
+          categories: categoryDuplicates.uniqueRecords.length,
+          skippedDuplicates:
+            expenseDuplicates.duplicates.length +
+            debtDuplicates.duplicates.length +
+            returnDuplicates.duplicates.length +
+            categoryDuplicates.duplicates.length,
+        };
+
+        setImportResult(summary);
+
+        // Notify parent of successful import
+        if (onImportSuccess) {
+          onImportSuccess(summary);
         }
+
+        setIsImporting(false);
+        return summary;
+      } catch (error) {
+        setErrors([`Import failed: ${error.message || 'Unknown error'}`]);
+        setIsImporting(false);
+        return null;
       }
-
-      // Build the result summary
-      const summary = {
-        fileName: selectedFile.name,
-        fileSize: selectedFile.size,
-        expenses: expenseDuplicates.uniqueRecords.length,
-        debts: debtDuplicates.uniqueRecords.length,
-        debtReturns: returnDuplicates.uniqueRecords.length,
-        categories: categoryDuplicates.uniqueRecords.length,
-        skippedDuplicates:
-          expenseDuplicates.duplicates.length +
-          debtDuplicates.duplicates.length +
-          returnDuplicates.duplicates.length +
-          categoryDuplicates.duplicates.length,
-      };
-
-      setImportResult(summary);
-
-      // Notify parent of successful import
-      if (onImportSuccess) {
-        onImportSuccess(summary);
-      }
-
-      setIsImporting(false);
-      return summary;
-    } catch (error) {
-      setErrors([`Import failed: ${error.message || 'Unknown error'}`]);
-      setIsImporting(false);
-      return null;
-    }
-  }, [selectedFile, onImportSuccess]);
+    },
+    [selectedFile, onImportSuccess]
+  );
 
   /**
    * Export current data to Excel file
    * @param {Object} data - Data to export (expenses, debts, debtReturns, categories)
    * @param {string} filename - Output filename (without extension)
-   * @returns {boolean} True if export succeeded
+   * @returns {Promise<boolean>} True if export succeeded
    */
-  const handleExport = useCallback(
-    async (data, filename = 'finance-data') => {
-      setIsExporting(true);
-      setErrors([]);
-      setWarnings([]);
+  const handleExport = useCallback(async (data, filename = 'finance-data') => {
+    setIsExporting(true);
+    setErrors([]);
+    setWarnings([]);
 
-      try {
-        // Validate that we have something to export
-        const hasData =
-          (data.expenses && data.expenses.length > 0) ||
-          (data.debts && data.debts.length > 0) ||
-          (data.debtReturns && data.debtReturns.length > 0) ||
-          (data.categories && data.categories.length > 0);
+    try {
+      // Validate that we have something to export
+      const hasData =
+        (data.expenses && data.expenses.length > 0) ||
+        (data.debts && data.debts.length > 0) ||
+        (data.debtReturns && data.debtReturns.length > 0) ||
+        (data.categories && data.categories.length > 0);
 
-        if (!hasData) {
-          setWarnings([
-            'No data to export. The workbook will be created with empty sheets.',
-          ]);
-        }
+      if (!hasData) {
+        setWarnings([
+          'No data to export. The workbook will be created with empty sheets.',
+        ]);
+      }
 
-        const success = exportToExcel(data, filename);
+      const success = exportToExcel(data, filename);
 
-        if (!success) {
-          setErrors(['Failed to export Excel file. Please try again.']);
-          setIsExporting(false);
-          return false;
-        }
-
-        setIsExporting(false);
-        return true;
-      } catch (error) {
-        setErrors([`Export failed: ${error.message || 'Unknown error'}`]);
+      if (!success) {
+        setErrors(['Failed to export Excel file. Please try again.']);
         setIsExporting(false);
         return false;
       }
-    },
-    []
-  );
+
+      setIsExporting(false);
+      return true;
+    } catch (error) {
+      setErrors([`Export failed: ${error.message || 'Unknown error'}`]);
+      setIsExporting(false);
+      return false;
+    }
+  }, []);
 
   /**
    * Reset all state (clear file selection and results)
