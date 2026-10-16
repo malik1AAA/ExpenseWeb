@@ -39,13 +39,9 @@ export default function DebtTable({
     return 'Active';
   };
 
-  // Filter debts by direction
-  const filteredDebts = direction === 'all' 
-    ? debts 
-    : debts.filter(d => d[COLUMNS.DEBTS.DIRECTION] === direction);
-
   // Sort by due date (earliest first)
-  const sortedDebts = [...filteredDebts].sort((a, b) => {
+  // Note: debts are already filtered by the parent component
+  const sortedDebts = [...debts].sort((a, b) => {
     const dateA = new Date(a[COLUMNS.DEBTS.DUE_DATE]);
     const dateB = new Date(b[COLUMNS.DEBTS.DUE_DATE]);
     return dateA - dateB;
