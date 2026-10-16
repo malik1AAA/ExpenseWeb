@@ -19,6 +19,7 @@ export function useExcelImport({ onImportSuccess } = {}) {
   const [importResult, setImportResult] = useState(null);
   const [errors, setErrors] = useState([]);
   const [warnings, setWarnings] = useState([]);
+  const [validationFormatted, setValidationFormatted] = useState(null);
 
   /**
    * Handle file selection from input
@@ -99,8 +100,35 @@ export function useExcelImport({ onImportSuccess } = {}) {
           return null;
         }
 
+        // Check for validation errors
+        if (result.validation && !result.validation.isValid) {
+          const validationErrors = result.validation.errors.map(
+            (err) => `[${err.sheet}] ${err.field ? err.field + ': ' : ''}${err.message}`
+          );
+          setErrors(validationErrors);
+          setValidationFormatted(result.validationFormatted);
+          
+          // Also add warnings if any
+          if (result.validation.warnings.length > 0) {
+            const validationWarnings = result.validation.warnings.map(
+              (warn) => `[${warn.sheet}] ${warn.field ? warn.field + ': ' : ''}${warn.message}`
+            );
+            setWarnings(validationWarnings);
+          }
+          
+          setIsImporting(false);
+          return null;
+        }
+
         // Collect warnings
         const allWarnings = [...(result.warnings || [])];
+        
+        // Add validation warnings if any
+        if (result.validation && result.validation.warnings.length > 0) {
+          result.validation.warnings.forEach((warn) => {
+            allWarnings.push(`[${warn.sheet}] ${warn.field ? warn.field + ': ' : ''}${warn.message}`);
+          });
+        }
 
         // Detect duplicates in each sheet
         const expenseDuplicates = detectDuplicates(
@@ -251,6 +279,7 @@ export function useExcelImport({ onImportSuccess } = {}) {
     setImportResult(null);
     setErrors([]);
     setWarnings([]);
+    setValidationFormatted(null);
   }, []);
 
   return {
@@ -260,6 +289,7 @@ export function useExcelImport({ onImportSuccess } = {}) {
     importResult,
     errors,
     warnings,
+    validationFormatted,
     handleFileSelect,
     handleImport,
     handleExport,

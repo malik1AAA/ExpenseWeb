@@ -7,6 +7,7 @@ import {
   DEBT_CATEGORY,
   CATEGORY_TYPE
 } from '../config/excelSchema';
+import { validateImportedData, formatValidationErrors } from './validationService';
 
 /**
  * Excel Service - Handles reading, parsing, creating, and exporting Excel files
@@ -536,6 +537,14 @@ export const readExcelFile = (file) => {
         });
         
         const result = parseWorkbook(workbook);
+        
+        // Validate the imported data
+        const validationResult = validateImportedData(result);
+        
+        // Add validation results to the result object
+        result.validation = validationResult;
+        result.validationFormatted = formatValidationErrors(validationResult);
+        
         resolve(result);
       } catch (error) {
         resolve({
@@ -545,6 +554,8 @@ export const readExcelFile = (file) => {
           categories: [],
           errors: [`Failed to read Excel file: ${error.message}`],
           warnings: [],
+          validation: null,
+          validationFormatted: null,
         });
       }
     };

@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, X } from 'lucide-react';
 import { useFinance } from '../../hooks/useFinance';
 import { useExcelImport } from '../../hooks/useExcelImport';
+import ValidationErrors from './ValidationErrors';
 
 /**
  * ExcelManager Component
@@ -10,6 +11,7 @@ import { useExcelImport } from '../../hooks/useExcelImport';
 export default function ExcelManager() {
   const fileInputRef = useRef(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [validationErrors, setValidationErrors] = useState(null);
   
   const {
     expenses,
@@ -26,11 +28,19 @@ export default function ExcelManager() {
     importResult,
     errors,
     warnings,
+    validationFormatted,
     handleFileSelect,
     handleImport,
     handleExport,
     reset,
   } = useExcelImport();
+
+  // Update local validation errors state when validationFormatted changes
+  useEffect(() => {
+    if (validationFormatted) {
+      setValidationErrors(validationFormatted);
+    }
+  }, [validationFormatted]);
 
   /**
    * Handle file input change
@@ -247,8 +257,16 @@ export default function ExcelManager() {
           </div>
         )}
 
+        {/* Validation Errors */}
+        {validationErrors && (
+          <ValidationErrors
+            validationFormatted={validationErrors}
+            onClose={() => setValidationErrors(null)}
+          />
+        )}
+
         {/* Errors */}
-        {errors.length > 0 && (
+        {errors.length > 0 && !validationFormatted && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
