@@ -8,10 +8,10 @@ import {
   CategoryBreakdownChart,
   RecentExpensesList,
   OutstandingDebtsList,
+  DebtStatistics,
 } from '../components/dashboard';
 import { formatCurrency } from '../utils/currencyUtils';
-import { Wallet, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { COLUMNS, DEBT_DIRECTION } from '../config/excelSchema';
+import { Wallet, TrendingUp } from 'lucide-react';
 
 export default function Dashboard() {
   const {
@@ -31,24 +31,6 @@ export default function Dashboard() {
   // Calculate all metrics dynamically
   const monthlySpending = getMonthlyTotal(expenses, selectedYear, selectedMonth);
   const annualSpending = getAnnualTotal(expenses, selectedYear);
-
-  // Calculate money lent and borrowed
-  const moneyLent = debts
-    .filter((d) => d[COLUMNS.DEBTS.DIRECTION] === DEBT_DIRECTION.LENT)
-    .reduce((sum, d) => sum + d[COLUMNS.DEBTS.ORIGINAL_AMOUNT], 0);
-
-  const moneyBorrowed = debts
-    .filter((d) => d[COLUMNS.DEBTS.DIRECTION] === DEBT_DIRECTION.BORROWED)
-    .reduce((sum, d) => sum + d[COLUMNS.DEBTS.ORIGINAL_AMOUNT], 0);
-
-  // Calculate outstanding receivable and payable
-  const outstandingReceivable = debts
-    .filter((d) => d[COLUMNS.DEBTS.DIRECTION] === DEBT_DIRECTION.LENT)
-    .reduce((sum, d) => sum + getRemainingDebt(d), 0);
-
-  const outstandingPayable = debts
-    .filter((d) => d[COLUMNS.DEBTS.DIRECTION] === DEBT_DIRECTION.BORROWED)
-    .reduce((sum, d) => sum + getRemainingDebt(d), 0);
 
   return (
     <div className="space-y-6">
@@ -70,7 +52,7 @@ export default function Dashboard() {
       />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <SummaryCard
           title="This Month's Spending"
           value={formatCurrency(monthlySpending)}
@@ -83,31 +65,10 @@ export default function Dashboard() {
           icon={TrendingUp}
           color="purple"
         />
-        <SummaryCard
-          title="Money Lent"
-          value={formatCurrency(moneyLent)}
-          icon={ArrowUpRight}
-          color="green"
-        />
-        <SummaryCard
-          title="Money Borrowed"
-          value={formatCurrency(moneyBorrowed)}
-          icon={ArrowDownRight}
-          color="red"
-        />
-        <SummaryCard
-          title="Outstanding Receivable"
-          value={formatCurrency(outstandingReceivable)}
-          icon={ArrowUpRight}
-          color="green"
-        />
-        <SummaryCard
-          title="Outstanding Payable"
-          value={formatCurrency(outstandingPayable)}
-          icon={ArrowDownRight}
-          color="red"
-        />
       </div>
+
+      {/* Debt Statistics */}
+      <DebtStatistics debts={debts} debtReturns={debtReturns} />
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

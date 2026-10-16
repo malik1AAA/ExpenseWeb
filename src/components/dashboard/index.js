@@ -4,3 +4,4 @@ export { default as MonthlySpendingChart } from './MonthlySpendingChart';
 export { default as CategoryBreakdownChart } from './CategoryBreakdownChart';
 export { default as RecentExpensesList } from './RecentExpensesList';
 export { default as OutstandingDebtsList } from './OutstandingDebtsList';
+export { default as DebtStatistics } from './DebtStatistics';
