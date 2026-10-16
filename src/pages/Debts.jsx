@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, ArrowUpRight, ArrowDownRight, List } from 'lucide-react';
 import { useFinance } from '../hooks/useFinance';
 import { PageHeader, Button, DeleteConfirmation } from '../components/common';
-import { DebtSummary, DebtTable, DebtForm, DebtReturnForm, DebtReturnsList } from '../components/debts';
+import { DebtSummary, DebtTable, DebtForm, DebtReturnForm, DebtReturnsList, DebtDetails } from '../components/debts';
 import { COLUMNS, DEBT_DIRECTION } from '../config/excelSchema';
 import { Modal } from '../components/common';
 
@@ -29,6 +29,8 @@ export default function Debts() {
   const [debtForReturn, setDebtForReturn] = useState(null);
   const [isReturnsListOpen, setIsReturnsListOpen] = useState(false);
   const [debtForReturnsList, setDebtForReturnsList] = useState(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [debtForDetails, setDebtForDetails] = useState(null);
 
   // Calculate remaining amount for a debt
   const calculateRemaining = (debt) => {
@@ -100,6 +102,12 @@ export default function Debts() {
     deleteDebtReturn(returnId);
   };
 
+  // Handle view details
+  const handleViewDetails = (debt) => {
+    setDebtForDetails(debt);
+    setIsDetailsOpen(true);
+  };
+
   // Get direction for new debt based on active tab
   const getDefaultDirection = () => {
     if (activeTab === 'lent') return DEBT_DIRECTION.LENT;
@@ -156,6 +164,7 @@ export default function Debts() {
         onEdit={handleEditDebt}
         onDelete={handleDeleteRequest}
         onRecordReturn={handleRecordPayment}
+        onViewDetails={handleViewDetails}
       />
 
       {/* Add/Edit Form Modal */}
@@ -200,6 +209,14 @@ export default function Debts() {
           />
         )}
       </Modal>
+
+      {/* Debt Details Modal */}
+      <DebtDetails
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        debt={debtForDetails}
+        debtReturns={debtReturns}
+      />
     </div>
   );
 }

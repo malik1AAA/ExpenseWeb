@@ -12,9 +12,9 @@ export default function DebtTable({
   direction = 'all',
   onEdit, 
   onDelete,
-  onRecordReturn
-}) {
-  // Calculate remaining amount for a debt
+  onRecordReturn,
+  onViewDetails
+}) {  // Calculate remaining amount for a debt
   const calculateRemaining = (debt) => {
     const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
     const totalReturned = debtReturns
@@ -120,7 +120,11 @@ export default function DebtTable({
               const isLent = debt[COLUMNS.DEBTS.DIRECTION] === DEBT_DIRECTION.LENT;
 
               return (
-                <tr key={debt[COLUMNS.DEBTS.DEBT_ID]} className="hover:bg-surface-50 transition-colors">
+                <tr 
+                  key={debt[COLUMNS.DEBTS.DEBT_ID]} 
+                  className="hover:bg-surface-50 transition-colors cursor-pointer"
+                  onClick={() => onViewDetails && onViewDetails(debt)}
+                >
                   <td className="px-4 py-3 text-sm text-surface-900 font-medium">
                     <div className="flex items-center gap-2">
                       {debt[COLUMNS.DEBTS.PERSON]}
