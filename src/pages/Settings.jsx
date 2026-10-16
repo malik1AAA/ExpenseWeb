@@ -9,7 +9,7 @@ import {
   Download,
   Upload,
 } from "lucide-react";
-import { ExcelManager } from '../components/settings';
+import { ExcelManager, CategoryManager } from '../components/settings';
 
 function Settings() {
   return (
@@ -29,41 +29,8 @@ function Settings() {
           {/* Excel Data Management */}
           <ExcelManager />
 
-          {/* Categories */}
-          <div className="bg-white rounded-xl border border-surface-200 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-lg bg-blue-50">
-                <Database className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-surface-800">
-                  Categories
-                </h3>
-                <p className="text-sm text-surface-500">
-                  Manage expense categories and budgets
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                "Food & Dining",
-                "Transportation",
-                "Housing",
-                "Utilities",
-                "Entertainment",
-                "Healthcare",
-                "Shopping",
-                "Education",
-              ].map((cat) => (
-                <span
-                  key={cat}
-                  className="px-3 py-1.5 bg-surface-100 text-surface-600 rounded-lg text-sm"
-                >
-                  {cat}
-                </span>
-              ))}
-            </div>
-          </div>
+          {/* Category Management */}
+          <CategoryManager />
 
           {/* Appearance */}
           <div className="bg-white rounded-xl border border-surface-200 p-6">
