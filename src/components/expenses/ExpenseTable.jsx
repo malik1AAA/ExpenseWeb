@@ -80,10 +80,11 @@ export default function ExpenseTable({
     [sortedExpenses.length, itemsPerPage]
   );
   
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  
   const paginatedExpenses = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
     return sortedExpenses.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedExpenses, currentPage, itemsPerPage]);
+  }, [sortedExpenses, startIndex, itemsPerPage]);
 
   const handleSort = useCallback(
     (field) => {
