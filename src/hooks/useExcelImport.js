@@ -69,17 +69,18 @@ export function useExcelImport({ onImportSuccess } = {}) {
 
   /**
    * Import the selected Excel file
-   * @param {Function} importFinanceData - Context function to replace all data
+   * @param {Function} importFinanceData - Context function to replace all data (null for validate-only)
+   * @param {boolean} validateOnly - If true, only validate without importing
    * @returns {Promise<Object|null>} Import result summary or null on failure
    */
   const handleImport = useCallback(
-    async (importFinanceData) => {
+    async (importFinanceData, validateOnly = false) => {
       if (!selectedFile) {
         setErrors(['Please select a file first']);
         return null;
       }
 
-      if (!importFinanceData || typeof importFinanceData !== 'function') {
+      if (!validateOnly && (!importFinanceData || typeof importFinanceData !== 'function')) {
         setErrors(['importFinanceData function is required']);
         return null;
       }
@@ -187,15 +188,6 @@ export function useExcelImport({ onImportSuccess } = {}) {
           return null;
         }
 
-        // Call the unified import function with all data at once
-        importFinanceData({
-          expenses: expenseDuplicates.uniqueRecords,
-          debts: debtDuplicates.uniqueRecords,
-          debtReturns: returnDuplicates.uniqueRecords,
-          categories: categoryDuplicates.uniqueRecords,
-          fileName: selectedFile.name,
-        });
-
         // Build the result summary
         const summary = {
           fileName: selectedFile.name,
@@ -209,7 +201,27 @@ export function useExcelImport({ onImportSuccess } = {}) {
             debtDuplicates.duplicates.length +
             returnDuplicates.duplicates.length +
             categoryDuplicates.duplicates.length,
+          validation: result.validation,
+          validationFormatted: result.validationFormatted,
+          data: {
+            expenses: expenseDuplicates.uniqueRecords,
+            debts: debtDuplicates.uniqueRecords,
+            debtReturns: returnDuplicates.uniqueRecords,
+            categories: categoryDuplicates.uniqueRecords,
+          }
         };
+
+        // If validate-only mode, return summary without importing
+        if (validateOnly) {
+          setIsImporting(false);
+          return summary;
+        }
+
+        // Call the unified import function with all data at once
+        importFinanceData({
+          ...summary.data,
+          fileName: selectedFile.name,
+        });
 
         setImportResult(summary);
 
