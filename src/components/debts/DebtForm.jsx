@@ -68,9 +68,7 @@ export default function DebtForm({
       newErrors[COLUMNS.DEBTS.DATE] = 'Date is required';
     }
 
-    if (!formData[COLUMNS.DEBTS.DUE_DATE]) {
-      newErrors[COLUMNS.DEBTS.DUE_DATE] = 'Due date is required';
-    }
+    // Due Date is optional - no validation required
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -106,8 +104,8 @@ export default function DebtForm({
 
   // Prepare direction options
   const directionOptions = [
-    { value: DEBT_DIRECTION.LENT, label: 'Lent (Money I gave)' },
-    { value: DEBT_DIRECTION.BORROWED, label: 'Borrowed (Money I took)' },
+    { value: DEBT_DIRECTION.LENT, label: 'Lent - Money I should receive back' },
+    { value: DEBT_DIRECTION.BORROWED, label: 'Borrowed - Money I need to pay back' },
   ];
 
   return (
@@ -127,13 +125,20 @@ export default function DebtForm({
           required
         />
 
-        <Select
-          label="Direction"
-          value={formData[COLUMNS.DEBTS.DIRECTION]}
-          onChange={(e) => handleChange(COLUMNS.DEBTS.DIRECTION, e.target.value)}
-          options={directionOptions}
-          required
-        />
+        <div>
+          <Select
+            label="Direction"
+            value={formData[COLUMNS.DEBTS.DIRECTION]}
+            onChange={(e) => handleChange(COLUMNS.DEBTS.DIRECTION, e.target.value)}
+            options={directionOptions}
+            required
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            {formData[COLUMNS.DEBTS.DIRECTION] === DEBT_DIRECTION.LENT
+              ? 'This debt represents money you should receive back from this person.'
+              : 'This debt represents money you need to pay back to this person.'}
+          </p>
+        </div>
 
         <Select
           label="Debt Category"
@@ -166,12 +171,11 @@ export default function DebtForm({
           />
 
           <Input
-            label="Due Date"
+            label="Due Date (Optional)"
             type="date"
             value={formData[COLUMNS.DEBTS.DUE_DATE]}
             onChange={(e) => handleChange(COLUMNS.DEBTS.DUE_DATE, e.target.value)}
             error={errors[COLUMNS.DEBTS.DUE_DATE]}
-            required
           />
         </div>
 
