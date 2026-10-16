@@ -243,6 +243,21 @@ export const getExpenseCount = (expenses) => {
   return expenses.length;
 };
 
+/**
+ * Find the expense with the highest amount
+ * @param {Array} expenses - Array of expense objects
+ * @returns {Object|null} Expense object with highest amount, or null if empty
+ */
+export const findHighestExpense = (expenses) => {
+  if (!Array.isArray(expenses) || expenses.length === 0) return null;
+  
+  return expenses.reduce((max, expense) => {
+    const amount = toNumber(expense[AMOUNT_FIELD]);
+    const maxAmount = max ? toNumber(max[AMOUNT_FIELD]) : -Infinity;
+    return amount > maxAmount ? expense : max;
+  }, null);
+};
+
 // ============================================================================
 // ADDITIONAL HELPER FUNCTIONS
 // ============================================================================
@@ -299,4 +314,37 @@ export const getMonthName = (month, locale = 'en-US') => {
 export const getShortMonthName = (month, locale = 'en-US') => {
   const date = new Date(2000, month, 1);
   return date.toLocaleString(locale, { month: 'short' });
+};
+
+/**
+ * Get daily totals for a specific month
+ * Returns an array of objects with day and total
+ * @param {Array} expenses - Array of expense objects
+ * @param {number} year - Year
+ * @param {number} month - Month (0-11)
+ * @returns {Array} Array of { day: number, total: number } objects
+ */
+export const getDailyTotalsForMonth = (expenses, year, month) => {
+  const monthExpenses = getExpensesForMonth(expenses, year, month);
+  
+  // Get number of days in the month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  
+  // Initialize array with zeros for all days
+  const dailyTotals = Array.from({ length: daysInMonth }, (_, i) => ({
+    day: i + 1,
+    total: 0,
+  }));
+  
+  // Sum expenses by day
+  monthExpenses.forEach((expense) => {
+    const date = parseDate(expense[DATE_FIELD]);
+    if (date && date.getMonth() === month && date.getFullYear() === year) {
+      const day = date.getDate();
+      const amount = toNumber(expense[AMOUNT_FIELD]);
+      dailyTotals[day - 1].total += amount;
+    }
+  });
+  
+  return dailyTotals;
 };
