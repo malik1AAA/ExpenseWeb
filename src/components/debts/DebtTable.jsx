@@ -1,7 +1,7 @@
 import { formatCurrency } from '../../utils/currencyUtils';
 import { formatDate } from '../../utils/dateUtils';
 import { COLUMNS, DEBT_DIRECTION } from '../../config/excelSchema';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, DollarSign } from 'lucide-react';
 
 /**
  * DebtTable - Table displaying debts with calculated fields
@@ -11,7 +11,8 @@ export default function DebtTable({
   debtReturns = [],
   direction = 'all',
   onEdit, 
-  onDelete 
+  onDelete,
+  onRecordReturn
 }) {
   // Calculate remaining amount for a debt
   const calculateRemaining = (debt) => {
@@ -157,6 +158,15 @@ export default function DebtTable({
                   </td>
                   <td className="px-4 py-3 text-sm text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {remaining > 0 && onRecordReturn && (
+                        <button
+                          onClick={() => onRecordReturn(debt)}
+                          className="p-1.5 rounded-lg hover:bg-green-50 transition-colors"
+                          title="Record Return"
+                        >
+                          <DollarSign className="w-4 h-4 text-green-600" />
+                        </button>
+                      )}
                       <button
                         onClick={() => onEdit(debt)}
                         className="p-1.5 rounded-lg hover:bg-surface-100 transition-colors"

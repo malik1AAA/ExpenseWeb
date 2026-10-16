@@ -155,6 +155,7 @@ export default function Debts() {
         direction={activeTab === 'all' ? 'all' : activeTab === 'lent' ? DEBT_DIRECTION.LENT : DEBT_DIRECTION.BORROWED}
         onEdit={handleEditDebt}
         onDelete={handleDeleteRequest}
+        onRecordReturn={handleRecordPayment}
       />
 
       {/* Add/Edit Form Modal */}
