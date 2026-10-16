@@ -11,7 +11,7 @@ import {
   DebtStatistics,
 } from '../components/dashboard';
 import { formatCurrency } from '../utils/currencyUtils';
-import { Wallet, TrendingUp } from 'lucide-react';
+import { Wallet, TrendingUp, LayoutDashboard } from 'lucide-react';
 
 export default function Dashboard() {
   const {
@@ -33,13 +33,20 @@ export default function Dashboard() {
   const annualSpending = getAnnualTotal(expenses, selectedYear);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-surface-900">Dashboard</h1>
-        <p className="text-surface-600 mt-1">
-          Overview of your financial activity
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-xl bg-primary-100">
+              <LayoutDashboard className="w-6 h-6 text-primary-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-surface-900">Dashboard</h1>
+          </div>
+          <p className="text-surface-600 text-base">
+            Overview of your financial activity and insights
+          </p>
+        </div>
       </div>
 
       {/* Month/Year Selector */}
@@ -52,7 +59,7 @@ export default function Dashboard() {
       />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <SummaryCard
           title="This Month's Spending"
           value={formatCurrency(monthlySpending)}
