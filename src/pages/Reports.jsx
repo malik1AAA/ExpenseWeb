@@ -1,55 +1,104 @@
 import { useState } from 'react';
-import { Download, FileSpreadsheet } from 'lucide-react';
-import { PageHeader, Button } from '../components/common';
-import { ReportPeriodSelector, SummaryStats, CategoryChart, MonthlyComparisonChart } from '../components/reports';
+import { useFinance } from '../hooks/useFinance';
+import {
+  getMonthlyTotal,
+  getExpenseCount,
+  getAverageMonthlySpending,
+  findHighestExpense,
+  getCategoryTotals,
+  getExpensesForMonth,
+  getCurrentYearMonth,
+} from '../services/calculationService';
+import { COLUMNS } from '../config/excelSchema';
+import {
+  ReportPeriodSelector,
+  ReportSummary,
+  CategoryBreakdown,
+  CategoryPieChart,
+  CategoryBarChart,
+  DailySpendingChart,
+  ReportExpenseTable,
+} from '../components/reports';
 
-function Reports() {
-  const [selectedPeriod, setSelectedPeriod] = useState('This Month');
+export default function Reports() {
+  const { expenses, getCategoryName, getCategoryColor } = useFinance();
+
+  const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+
+  // Get expenses for the selected month
+  const monthExpenses = getExpensesForMonth(expenses, selectedYear, selectedMonth);
+
+  // Calculate summary statistics using calculationService
+  const total = getMonthlyTotal(expenses, selectedYear, selectedMonth);
+  const count = getExpenseCount(monthExpenses);
+  const average = getAverageMonthlySpending(expenses, selectedYear) / 12; // Monthly average
+  const highestExpense = findHighestExpense(monthExpenses);
+  const largest = highestExpense ? parseFloat(highestExpense[COLUMNS.EXPENSES.AMOUNT]) : 0;
+
+  // Get category breakdown
+  const categoryTotals = getCategoryTotals(expenses, selectedYear, selectedMonth);
+  const categoryData = Object.entries(categoryTotals).map(([category, total]) => ({
+    category,
+    total,
+  }));
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <PageHeader
-        title="Reports"
-        description="Analyze your spending patterns and trends"
-      >
-        <Button variant="secondary" icon={Download}>
-          Export Report
-        </Button>
-      </PageHeader>
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-surface-900">Monthly Reports</h1>
+        <p className="text-surface-600 mt-1">
+          Detailed analysis of your monthly spending
+        </p>
+      </div>
 
       {/* Period Selector */}
       <ReportPeriodSelector
-        selected={selectedPeriod}
-        onSelect={setSelectedPeriod}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
+        onYearChange={setSelectedYear}
+        onMonthChange={setSelectedMonth}
+        expenses={expenses}
       />
+
+      {/* Summary Stats */}
+      <ReportSummary total={total} count={count} average={average} largest={largest} />
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <CategoryChart />
-        <MonthlyComparisonChart />
+        <CategoryPieChart
+          categoryData={categoryData}
+          getCategoryName={getCategoryName}
+          getCategoryColor={getCategoryColor}
+        />
+        <CategoryBarChart
+          categoryData={categoryData}
+          getCategoryName={getCategoryName}
+          getCategoryColor={getCategoryColor}
+        />
       </div>
 
-      {/* Summary Stats */}
-      <SummaryStats />
+      {/* Daily Spending Chart */}
+      <DailySpendingChart
+        expenses={expenses}
+        year={selectedYear}
+        month={selectedMonth}
+      />
 
-      {/* Excel Import Info */}
-      <div className="bg-primary-50 border border-primary-200 rounded-xl p-5">
-        <div className="flex items-start gap-3">
-          <FileSpreadsheet className="w-5 h-5 text-primary-600 mt-0.5" />
-          <div>
-            <h4 className="text-sm font-semibold text-primary-800">
-              Excel Data Source
-            </h4>
-            <p className="text-sm text-primary-600 mt-1">
-              Import your expense data from Excel files to generate detailed reports
-              with charts and insights. Supported formats: .xlsx, .xls
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Category Breakdown Table */}
+      <CategoryBreakdown
+        categoryData={categoryData}
+        total={total}
+        getCategoryName={getCategoryName}
+      />
+
+      {/* Detailed Expense Table */}
+      <ReportExpenseTable
+        expenses={monthExpenses}
+        getCategoryName={getCategoryName}
+      />
     </div>
   );
 }
-
-export default Reports;
