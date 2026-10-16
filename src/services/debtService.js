@@ -3,6 +3,7 @@
  */
 
 import { COLUMNS, DEBT_DIRECTION } from '../config/excelSchema';
+import { generateDebtId, generateReturnId } from './idGeneratorService';
 
 const COL = COLUMNS.DEBTS;
 const RET_COL = COLUMNS.DEBT_RETURNS;
@@ -120,7 +121,7 @@ export const sortDebtsByAmount = (debts, order = 'desc') => {
  */
 export const createDebt = (debtData) => {
   return {
-    [COL.DEBT_ID]: generateId(),
+    [COL.DEBT_ID]: debtData[COL.DEBT_ID] || generateDebtId(),
     [COL.PERSON]: debtData[COL.PERSON] || '',
     [COL.DEBT_CATEGORY]: debtData[COL.DEBT_CATEGORY] || 'Cash',
     [COL.DIRECTION]: debtData[COL.DIRECTION] || DEBT_DIRECTION.LENT,
@@ -180,26 +181,10 @@ export const calculateRemainingDebt = (debt, returns = []) => {
  */
 export const createDebtReturn = (returnData) => {
   return {
-    [RET_COL.RETURN_ID]: generateReturnId(),
+    [RET_COL.RETURN_ID]: returnData[RET_COL.RETURN_ID] || generateReturnId(),
     [RET_COL.DEBT_ID]: returnData[RET_COL.DEBT_ID] || '',
     [RET_COL.DATE]: returnData[RET_COL.DATE] || new Date().toISOString().split('T')[0],
     [RET_COL.AMOUNT]: Number(returnData[RET_COL.AMOUNT]) || 0,
     [RET_COL.NOTES]: returnData[RET_COL.NOTES] || '',
   };
-};
-
-/**
- * Generate unique ID
- * @returns {string} Unique ID
- */
-const generateId = () => {
-  return 'DEBT' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5).toUpperCase();
-};
-
-/**
- * Generate unique return ID
- * @returns {string} Unique return ID
- */
-const generateReturnId = () => {
-  return 'RET' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5).toUpperCase();
 };

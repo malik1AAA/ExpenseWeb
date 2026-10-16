@@ -3,6 +3,7 @@
  */
 
 import { COLUMNS } from '../config/excelSchema';
+import { generateExpenseId } from './idGeneratorService';
 
 const COL = COLUMNS.EXPENSES;
 
@@ -85,7 +86,7 @@ export const sortExpensesByAmount = (expenses, order = 'desc') => {
  */
 export const createExpense = (expenseData) => {
   return {
-    [COL.EXPENSE_ID]: generateId(),
+    [COL.EXPENSE_ID]: expenseData[COL.EXPENSE_ID] || generateExpenseId(),
     [COL.DATE]: expenseData[COL.DATE] || new Date().toISOString().split('T')[0],
     [COL.DESCRIPTION]: expenseData[COL.DESCRIPTION] || '',
     [COL.CATEGORY]: expenseData[COL.CATEGORY] || 'other',
@@ -118,7 +119,7 @@ export const updateExpense = (existing, updates) => {
  */
 export const mapExcelRowToExpense = (row) => {
   return {
-    [COL.EXPENSE_ID]: row[COL.EXPENSE_ID] || generateId(),
+    [COL.EXPENSE_ID]: row[COL.EXPENSE_ID] || generateExpenseId(),
     [COL.DATE]: row[COL.DATE] || '',
     [COL.DESCRIPTION]: row[COL.DESCRIPTION] || '',
     [COL.CATEGORY]: row[COL.CATEGORY] || 'other',
@@ -126,12 +127,4 @@ export const mapExcelRowToExpense = (row) => {
     [COL.PAYMENT_METHOD]: row[COL.PAYMENT_METHOD] || '',
     [COL.NOTES]: row[COL.NOTES] || '',
   };
-};
-
-/**
- * Generate unique ID
- * @returns {string} Unique ID
- */
-const generateId = () => {
-  return 'EXP' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5).toUpperCase();
 };

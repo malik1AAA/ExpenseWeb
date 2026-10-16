@@ -8,6 +8,7 @@ import {
   CATEGORY_TYPE
 } from '../config/excelSchema';
 import { validateImportedData, formatValidationErrors } from './validationService';
+import { generateExpenseId, generateDebtId, generateReturnId } from './idGeneratorService';
 
 /**
  * Excel Service - Handles reading, parsing, creating, and exporting Excel files
@@ -398,6 +399,108 @@ const validateColumns = (rows, sheetName) => {
 };
 
 // ============================================================================
+// AUTO-GENERATE MISSING IDS
+// ============================================================================
+
+/**
+ * Auto-generate IDs for records that are missing them
+ * Ensures no duplicate IDs exist
+ * @param {Array} expenses - Array of expense objects
+ * @param {Array} debts - Array of debt objects
+ * @param {Array} debtReturns - Array of debt return objects
+ * @returns {{ expenses: Array, debts: Array, debtReturns: Array }}
+ */
+const autoGenerateMissingIds = (expenses, debts, debtReturns) => {
+  // Track existing IDs to ensure uniqueness
+  const existingExpenseIds = new Set();
+  const existingDebtIds = new Set();
+  const existingReturnIds = new Set();
+  
+  // First pass: collect all existing IDs
+  expenses.forEach(expense => {
+    const id = expense[COLUMNS.EXPENSES.EXPENSE_ID];
+    if (id) {
+      existingExpenseIds.add(id);
+    }
+  });
+  
+  debts.forEach(debt => {
+    const id = debt[COLUMNS.DEBTS.DEBT_ID];
+    if (id) {
+      existingDebtIds.add(id);
+    }
+  });
+  
+  debtReturns.forEach(ret => {
+    const id = ret[COLUMNS.DEBT_RETURNS.RETURN_ID];
+    if (id) {
+      existingReturnIds.add(id);
+    }
+  });
+  
+  // Second pass: generate IDs for records missing them
+  const processedExpenses = expenses.map(expense => {
+    const id = expense[COLUMNS.EXPENSES.EXPENSE_ID];
+    if (!id || existingExpenseIds.has(id)) {
+      // Generate new unique ID
+      let newId;
+      do {
+        newId = generateExpenseId();
+      } while (existingExpenseIds.has(newId));
+      
+      existingExpenseIds.add(newId);
+      return {
+        ...expense,
+        [COLUMNS.EXPENSES.EXPENSE_ID]: newId,
+      };
+    }
+    return expense;
+  });
+  
+  const processedDebts = debts.map(debt => {
+    const id = debt[COLUMNS.DEBTS.DEBT_ID];
+    if (!id || existingDebtIds.has(id)) {
+      // Generate new unique ID
+      let newId;
+      do {
+        newId = generateDebtId();
+      } while (existingDebtIds.has(newId));
+      
+      existingDebtIds.add(newId);
+      return {
+        ...debt,
+        [COLUMNS.DEBTS.DEBT_ID]: newId,
+      };
+    }
+    return debt;
+  });
+  
+  const processedReturns = debtReturns.map(ret => {
+    const id = ret[COLUMNS.DEBT_RETURNS.RETURN_ID];
+    if (!id || existingReturnIds.has(id)) {
+      // Generate new unique ID
+      let newId;
+      do {
+        newId = generateReturnId();
+      } while (existingReturnIds.has(newId));
+      
+      existingReturnIds.add(newId);
+      return {
+        ...ret,
+        [COLUMNS.DEBT_RETURNS.RETURN_ID]: newId,
+      };
+    }
+    return ret;
+  });
+  
+  return {
+    expenses: processedExpenses,
+    debts: processedDebts,
+    debtReturns: processedReturns,
+  };
+};
+
+// ============================================================================
 // WORKBOOK PARSING
 // ============================================================================
 
@@ -407,6 +510,7 @@ const validateColumns = (rows, sheetName) => {
  * - Converts each sheet to objects
  * - Validates required columns
  * - Handles missing sheets gracefully
+ * - Auto-generates missing IDs
  * 
  * @param {Object} workbook - XLSX workbook object
  * @returns {{ 
@@ -472,6 +576,17 @@ export const parseWorkbook = (workbook) => {
     // Store data
     result[key] = rows;
   });
+  
+  // Auto-generate missing IDs and ensure uniqueness
+  const processed = autoGenerateMissingIds(
+    result.expenses,
+    result.debts,
+    result.debtReturns
+  );
+  
+  result.expenses = processed.expenses;
+  result.debts = processed.debts;
+  result.debtReturns = processed.debtReturns;
   
   return result;
 };

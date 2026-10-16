@@ -1,4 +1,4 @@
-import { createContext, useState, useCallback } from 'react';
+import { createContext, useState, useCallback, useEffect } from 'react';
 import {
   sampleExpenses,
   sampleDebts,
@@ -6,6 +6,7 @@ import {
   sampleCategories,
 } from '../data/sampleData';
 import { COLUMNS } from '../config/excelSchema';
+import { syncCountersWithData } from '../services/idGeneratorService';
 
 /**
  * FinanceContext - Pure state management for finance data
@@ -52,6 +53,11 @@ export function FinanceProvider({ children }) {
 
   // Array of error strings from the most recent operation.
   const [errors, setErrors] = useState([]);
+
+  // Sync ID counters with existing data on mount
+  useEffect(() => {
+    syncCountersWithData(sampleExpenses, sampleDebts, sampleDebtReturns);
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -102,11 +108,19 @@ export function FinanceProvider({ children }) {
       setErrors([]);
     }
 
-    setExpenses(Array.isArray(data.expenses) ? data.expenses : []);
-    setDebts(Array.isArray(data.debts) ? data.debts : []);
-    setDebtReturns(Array.isArray(data.debtReturns) ? data.debtReturns : []);
-    setCategories(Array.isArray(data.categories) ? data.categories : []);
+    const expenses = Array.isArray(data.expenses) ? data.expenses : [];
+    const debts = Array.isArray(data.debts) ? data.debts : [];
+    const debtReturns = Array.isArray(data.debtReturns) ? data.debtReturns : [];
+    const categories = Array.isArray(data.categories) ? data.categories : [];
+
+    setExpenses(expenses);
+    setDebts(debts);
+    setDebtReturns(debtReturns);
+    setCategories(categories);
     setCurrentExcelFileName(data.fileName || null);
+
+    // Sync ID counters with imported data
+    syncCountersWithData(expenses, debts, debtReturns);
   }, []);
 
   /**
