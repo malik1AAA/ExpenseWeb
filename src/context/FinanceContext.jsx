@@ -7,6 +7,8 @@ import {
 } from '../data/sampleData';
 import { COLUMNS } from '../config/excelSchema';
 import { syncCountersWithData } from '../services/idGeneratorService';
+import { useAuth } from './AuthContext';
+import * as supabaseService from '../services/supabaseDataService';
 
 /**
  * FinanceContext - Pure state management for finance data
@@ -34,30 +36,69 @@ const RETURN_ID = COLUMNS.DEBT_RETURNS.RETURN_ID;
 const CATEGORY_ID = COLUMNS.CATEGORIES.CATEGORY_ID;
 
 export function FinanceProvider({ children }) {
+  const { user } = useAuth();
+
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
 
-  // On first render, load sample data (used when no Excel file has been imported).
-  // Once importFinanceData() is called, these arrays are replaced with Excel data.
-  const [expenses, setExpenses] = useState(sampleExpenses);
-  const [debts, setDebts] = useState(sampleDebts);
-  const [debtReturns, setDebtReturns] = useState(sampleDebtReturns);
-  const [categories, setCategories] = useState(sampleCategories);
+  const [expenses, setExpenses] = useState([]);
+  const [debts, setDebts] = useState([]);
+  const [debtReturns, setDebtReturns] = useState([]);
+  const [categories, setCategories] = useState([]);
 
-  // Name of the currently loaded Excel file. Null = using sample data.
   const [currentExcelFileName, setCurrentExcelFileName] = useState(null);
-
-  // Loading flag for async operations (e.g., file parsing).
   const [loading, setLoading] = useState(false);
-
-  // Array of error strings from the most recent operation.
   const [errors, setErrors] = useState([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Sync ID counters with existing data on mount
+  // ---------------------------------------------------------------------------
+  // Load data from Supabase when user is authenticated
+  // ---------------------------------------------------------------------------
+
   useEffect(() => {
-    syncCountersWithData(sampleExpenses, sampleDebts, sampleDebtReturns);
-  }, []);
+    const loadData = async () => {
+      if (!user) {
+        // User signed out - clear data
+        setExpenses([]);
+        setDebts([]);
+        setDebtReturns([]);
+        setCategories([]);
+        setDataLoaded(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setErrors([]);
+
+        // Fetch all data from Supabase
+        const [expensesData, debtsData, debtReturnsData, categoriesData] = await Promise.all([
+          supabaseService.fetchExpenses(),
+          supabaseService.fetchDebts(),
+          supabaseService.fetchDebtReturns(),
+          supabaseService.fetchCategories(),
+        ]);
+
+        setExpenses(expensesData);
+        setDebts(debtsData);
+        setDebtReturns(debtReturnsData);
+        setCategories(categoriesData);
+
+        // Sync ID counters with loaded data
+        syncCountersWithData(expensesData, debtsData, debtReturnsData);
+
+        setDataLoaded(true);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setErrors([`Failed to load data: ${error.message}`]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user]);
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -84,6 +125,7 @@ export function FinanceProvider({ children }) {
 
   /**
    * Replace all financial data with imported data from an Excel file.
+   * Saves to Supabase if user is authenticated.
    *
    * @param {{
    *   expenses?: Array,
@@ -94,16 +136,14 @@ export function FinanceProvider({ children }) {
    *   errors?: string[]
    * }} data
    */
-  const importFinanceData = useCallback((data) => {
+  const importFinanceData = useCallback(async (data) => {
     if (!data || typeof data !== 'object') {
       setErrors(['Invalid data provided to importFinanceData']);
       return;
     }
 
-    // If the caller passed errors from the Excel service, surface them.
     if (Array.isArray(data.errors) && data.errors.length > 0) {
       setErrors(data.errors);
-      // Still load whatever data is available so the UI isn't blank.
     } else {
       setErrors([]);
     }
@@ -113,114 +153,245 @@ export function FinanceProvider({ children }) {
     const debtReturns = Array.isArray(data.debtReturns) ? data.debtReturns : [];
     const categories = Array.isArray(data.categories) ? data.categories : [];
 
+    // Update local state immediately
     setExpenses(expenses);
     setDebts(debts);
     setDebtReturns(debtReturns);
     setCategories(categories);
     setCurrentExcelFileName(data.fileName || null);
 
-    // Sync ID counters with imported data
+    // Sync ID counters
     syncCountersWithData(expenses, debts, debtReturns);
-  }, []);
+
+    // Save to Supabase if user is authenticated
+    if (user) {
+      try {
+        setLoading(true);
+        await supabaseService.importData({ expenses, debts, debtReturns, categories });
+      } catch (error) {
+        console.error('Error saving to Supabase:', error);
+        setErrors([`Failed to save data: ${error.message}`]);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }, [user]);
 
   /**
-   * Clear all data and reset to sample data (as if no Excel has been imported).
+   * Clear all data and reset to empty state.
+   * Deletes from Supabase if user is authenticated.
    */
-  const clearAllData = useCallback(() => {
-    setExpenses(sampleExpenses);
-    setDebts(sampleDebts);
-    setDebtReturns(sampleDebtReturns);
-    setCategories(sampleCategories);
+  const clearAllData = useCallback(async () => {
+    setExpenses([]);
+    setDebts([]);
+    setDebtReturns([]);
+    setCategories([]);
     setCurrentExcelFileName(null);
     setErrors([]);
-  }, []);
+
+    // Delete from Supabase if user is authenticated
+    if (user) {
+      try {
+        setLoading(true);
+        await supabaseService.deleteAllData();
+      } catch (error) {
+        console.error('Error deleting data:', error);
+        setErrors([`Failed to delete data: ${error.message}`]);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }, [user]);
 
   // ---------------------------------------------------------------------------
   // Expenses CRUD
   // ---------------------------------------------------------------------------
 
   const addExpense = useCallback(
-    (expense) => {
+    async (expense) => {
       if (!expense) return null;
       const newExpense = {
         ...expense,
         [EXPENSE_ID]: expense[EXPENSE_ID] || generateId('EXP'),
       };
+      
+      // Update local state immediately
       setExpenses((prev) => [newExpense, ...prev]);
+      
+      // Save to Supabase if user is authenticated
+      if (user) {
+        try {
+          await supabaseService.createExpense(newExpense);
+        } catch (error) {
+          console.error('Error creating expense:', error);
+          setErrors([`Failed to save expense: ${error.message}`]);
+          // Revert local state on error
+          setExpenses((prev) => prev.filter((e) => e[EXPENSE_ID] !== newExpense[EXPENSE_ID]));
+        }
+      }
+      
       return newExpense;
     },
-    [generateId]
+    [generateId, user]
   );
 
-  const updateExpense = useCallback((id, expense) => {
+  const updateExpense = useCallback(async (id, expense) => {
     if (!id || !expense) return;
+    
+    // Update local state immediately
     setExpenses((prev) =>
       prev.map((e) => (e[EXPENSE_ID] === id ? { ...e, ...expense } : e))
     );
-  }, []);
+    
+    // Save to Supabase if user is authenticated
+    if (user) {
+      try {
+        await supabaseService.updateExpense(id, expense);
+      } catch (error) {
+        console.error('Error updating expense:', error);
+        setErrors([`Failed to update expense: ${error.message}`]);
+      }
+    }
+  }, [user]);
 
-  const deleteExpense = useCallback((id) => {
+  const deleteExpense = useCallback(async (id) => {
     if (!id) return;
+    
+    // Update local state immediately
     setExpenses((prev) => prev.filter((e) => e[EXPENSE_ID] !== id));
-  }, []);
+    
+    // Delete from Supabase if user is authenticated
+    if (user) {
+      try {
+        await supabaseService.deleteExpense(id);
+      } catch (error) {
+        console.error('Error deleting expense:', error);
+        setErrors([`Failed to delete expense: ${error.message}`]);
+      }
+    }
+  }, [user]);
 
   // ---------------------------------------------------------------------------
   // Debts CRUD
   // ---------------------------------------------------------------------------
 
   const addDebt = useCallback(
-    (debt) => {
+    async (debt) => {
       if (!debt) return null;
       const newDebt = {
         ...debt,
         [DEBT_ID]: debt[DEBT_ID] || generateId('DEBT'),
       };
+      
+      // Update local state immediately
       setDebts((prev) => [newDebt, ...prev]);
+      
+      // Save to Supabase if user is authenticated
+      if (user) {
+        try {
+          await supabaseService.createDebt(newDebt);
+        } catch (error) {
+          console.error('Error creating debt:', error);
+          setErrors([`Failed to save debt: ${error.message}`]);
+          setDebts((prev) => prev.filter((d) => d[DEBT_ID] !== newDebt[DEBT_ID]));
+        }
+      }
+      
       return newDebt;
     },
-    [generateId]
+    [generateId, user]
   );
 
-  const updateDebt = useCallback((id, debt) => {
+  const updateDebt = useCallback(async (id, debt) => {
     if (!id || !debt) return;
+    
+    // Update local state immediately
     setDebts((prev) =>
       prev.map((d) => (d[DEBT_ID] === id ? { ...d, ...debt } : d))
     );
-  }, []);
+    
+    // Save to Supabase if user is authenticated
+    if (user) {
+      try {
+        await supabaseService.updateDebt(id, debt);
+      } catch (error) {
+        console.error('Error updating debt:', error);
+        setErrors([`Failed to update debt: ${error.message}`]);
+      }
+    }
+  }, [user]);
 
-  const deleteDebt = useCallback((id) => {
+  const deleteDebt = useCallback(async (id) => {
     if (!id) return;
+    
+    // Update local state immediately
     setDebts((prev) => prev.filter((d) => d[DEBT_ID] !== id));
-  }, []);
+    
+    // Delete from Supabase if user is authenticated
+    if (user) {
+      try {
+        await supabaseService.deleteDebt(id);
+      } catch (error) {
+        console.error('Error deleting debt:', error);
+        setErrors([`Failed to delete debt: ${error.message}`]);
+      }
+    }
+  }, [user]);
 
   // ---------------------------------------------------------------------------
   // Debt Returns CRUD
   // ---------------------------------------------------------------------------
 
   const addDebtReturn = useCallback(
-    (returnEntry) => {
+    async (returnEntry) => {
       if (!returnEntry) return null;
       const newReturn = {
         ...returnEntry,
         [RETURN_ID]: returnEntry[RETURN_ID] || generateId('RET'),
       };
+      
+      // Update local state immediately
       setDebtReturns((prev) => [newReturn, ...prev]);
+      
+      // Save to Supabase if user is authenticated
+      if (user) {
+        try {
+          await supabaseService.createDebtReturn(newReturn);
+        } catch (error) {
+          console.error('Error creating debt return:', error);
+          setErrors([`Failed to save debt return: ${error.message}`]);
+          setDebtReturns((prev) => prev.filter((r) => r[RETURN_ID] !== newReturn[RETURN_ID]));
+        }
+      }
+      
       return newReturn;
     },
-    [generateId]
+    [generateId, user]
   );
 
-  const deleteDebtReturn = useCallback((id) => {
+  const deleteDebtReturn = useCallback(async (id) => {
     if (!id) return;
+    
+    // Update local state immediately
     setDebtReturns((prev) => prev.filter((r) => r[RETURN_ID] !== id));
-  }, []);
+    
+    // Delete from Supabase if user is authenticated
+    if (user) {
+      try {
+        await supabaseService.deleteDebtReturn(id);
+      } catch (error) {
+        console.error('Error deleting debt return:', error);
+        setErrors([`Failed to delete debt return: ${error.message}`]);
+      }
+    }
+  }, [user]);
 
   // ---------------------------------------------------------------------------
   // Categories CRUD
   // ---------------------------------------------------------------------------
 
   const addCategory = useCallback(
-    (category) => {
+    async (category) => {
       if (!category) return null;
       const newCategory = {
         ...category,
@@ -231,23 +402,61 @@ export function FinanceProvider({ children }) {
             .replace(/\s+/g, '-') ||
           generateId('CAT'),
       };
+      
+      // Update local state immediately
       setCategories((prev) => [...prev, newCategory]);
+      
+      // Save to Supabase if user is authenticated
+      if (user) {
+        try {
+          await supabaseService.createCategory(newCategory);
+        } catch (error) {
+          console.error('Error creating category:', error);
+          setErrors([`Failed to save category: ${error.message}`]);
+          setCategories((prev) => prev.filter((c) => c[CATEGORY_ID] !== newCategory[CATEGORY_ID]));
+        }
+      }
+      
       return newCategory;
     },
-    [generateId]
+    [generateId, user]
   );
 
-  const updateCategory = useCallback((id, category) => {
+  const updateCategory = useCallback(async (id, category) => {
     if (!id || !category) return;
+    
+    // Update local state immediately
     setCategories((prev) =>
       prev.map((c) => (c[CATEGORY_ID] === id ? { ...c, ...category } : c))
     );
-  }, []);
+    
+    // Save to Supabase if user is authenticated
+    if (user) {
+      try {
+        await supabaseService.updateCategory(id, category);
+      } catch (error) {
+        console.error('Error updating category:', error);
+        setErrors([`Failed to update category: ${error.message}`]);
+      }
+    }
+  }, [user]);
 
-  const deleteCategory = useCallback((id) => {
+  const deleteCategory = useCallback(async (id) => {
     if (!id) return;
+    
+    // Update local state immediately
     setCategories((prev) => prev.filter((c) => c[CATEGORY_ID] !== id));
-  }, []);
+    
+    // Delete from Supabase if user is authenticated
+    if (user) {
+      try {
+        await supabaseService.deleteCategory(id);
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        setErrors([`Failed to delete category: ${error.message}`]);
+      }
+    }
+  }, [user]);
 
   // ---------------------------------------------------------------------------
   // Context value
@@ -262,6 +471,7 @@ export function FinanceProvider({ children }) {
     currentExcelFileName,
     loading,
     errors,
+    dataLoaded,
 
     // Import / Clear
     importFinanceData,
