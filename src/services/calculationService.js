@@ -348,3 +348,86 @@ export const getDailyTotalsForMonth = (expenses, year, month) => {
   
   return dailyTotals;
 };
+
+/**
+ * Get the month with highest spending for a year
+ * @param {Array} expenses - Array of expense objects
+ * @param {number} year - Year
+ * @returns {{ month: number, total: number } | null} Month (0-11) and total, or null if no data
+ */
+export const getHighestSpendingMonth = (expenses, year) => {
+  const monthlyTotals = getMonthlyTotalsForYear(expenses, year);
+  
+  if (monthlyTotals.every(m => m.total === 0)) return null;
+  
+  return monthlyTotals.reduce((max, current) => {
+    return current.total > max.total ? current : max;
+  });
+};
+
+/**
+ * Get the month with lowest spending for a year (excluding months with 0)
+ * @param {Array} expenses - Array of expense objects
+ * @param {number} year - Year
+ * @returns {{ month: number, total: number } | null} Month (0-11) and total, or null if no data
+ */
+export const getLowestSpendingMonth = (expenses, year) => {
+  const monthlyTotals = getMonthlyTotalsForYear(expenses, year);
+  const nonZeroMonths = monthlyTotals.filter(m => m.total > 0);
+  
+  if (nonZeroMonths.length === 0) return null;
+  
+  return nonZeroMonths.reduce((min, current) => {
+    return current.total < min.total ? current : min;
+  });
+};
+
+/**
+ * Get the category with highest spending for a year
+ * @param {Array} expenses - Array of expense objects
+ * @param {number} year - Year
+ * @returns {{ category: string, total: number } | null} Highest category or null if no data
+ */
+export const getHighestSpendingCategoryForYear = (expenses, year) => {
+  const categoryTotals = getAnnualCategoryTotals(expenses, year);
+  
+  if (Object.keys(categoryTotals).length === 0) return null;
+  
+  let highestCategory = null;
+  let highestTotal = -Infinity;
+  
+  Object.entries(categoryTotals).forEach(([category, total]) => {
+    if (total > highestTotal) {
+      highestTotal = total;
+      highestCategory = category;
+    }
+  });
+  
+  return {
+    category: highestCategory,
+    total: highestTotal,
+  };
+};
+
+/**
+ * Get monthly summary data for a year
+ * Returns array of objects with month, total, count, and average
+ * @param {Array} expenses - Array of expense objects
+ * @param {number} year - Year
+ * @returns {Array} Array of { month: number, total: number, count: number, average: number }
+ */
+export const getMonthlySummaryForYear = (expenses, year) => {
+  return Array.from({ length: 12 }, (_, month) => {
+    const monthExpenses = getExpensesForMonth(expenses, year, month);
+    const total = getTotalExpenses(monthExpenses);
+    const count = monthExpenses.length;
+    const average = count > 0 ? total / count : 0;
+    
+    return {
+      month,
+      total,
+      count,
+      average,
+    };
+  });
+};
