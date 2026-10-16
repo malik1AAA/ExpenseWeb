@@ -1,4 +1,4 @@
-import { useContext, useMemo } from 'react';
+import { useContext, useMemo, useCallback } from 'react';
 import { FinanceContext } from '../context/FinanceContext';
 import {
   getTotalExpenses,
@@ -79,51 +79,67 @@ export function useFinance() {
   );
 
   // ---------------------------------------------------------------------------
-  // Helper functions
+  // Helper functions (memoized to prevent unnecessary re-renders)
   // ---------------------------------------------------------------------------
+
+  // Create a category map for O(1) lookups instead of O(n) find operations
+  const categoryMap = useMemo(() => {
+    const map = new Map();
+    categories.forEach((cat) => {
+      map.set(cat[COLUMNS.CATEGORIES.CATEGORY_ID], cat);
+    });
+    return map;
+  }, [categories]);
 
   /**
    * Get category display name by ID
    * @param {string} categoryId
    * @returns {string}
    */
-  const getCategoryName = (categoryId) => {
-    const category = categories.find(
-      (c) => c[COLUMNS.CATEGORIES.CATEGORY_ID] === categoryId
-    );
-    return category ? category[COLUMNS.CATEGORIES.CATEGORY_NAME] : categoryId;
-  };
+  const getCategoryName = useCallback(
+    (categoryId) => {
+      const category = categoryMap.get(categoryId);
+      return category ? category[COLUMNS.CATEGORIES.CATEGORY_NAME] : categoryId;
+    },
+    [categoryMap]
+  );
 
   /**
    * Get a consistent color for a category
    * @param {string} categoryId
    * @returns {string} Hex color
    */
-  const getCategoryColor = (categoryId) => {
-    const colors = [
-      '#f97316',
-      '#3b82f6',
-      '#8b5cf6',
-      '#eab308',
-      '#ec4899',
-      '#10b981',
-      '#6366f1',
-      '#14b8a6',
-    ];
-    const index = categories.findIndex(
-      (c) => c[COLUMNS.CATEGORIES.CATEGORY_ID] === categoryId
-    );
-    return colors[index % colors.length] || '#64748b';
-  };
+  const getCategoryColor = useCallback(
+    (categoryId) => {
+      const colors = [
+        '#f97316',
+        '#3b82f6',
+        '#8b5cf6',
+        '#eab308',
+        '#ec4899',
+        '#10b981',
+        '#6366f1',
+        '#14b8a6',
+      ];
+      const index = categories.findIndex(
+        (c) => c[COLUMNS.CATEGORIES.CATEGORY_ID] === categoryId
+      );
+      return colors[index % colors.length] || '#64748b';
+    },
+    [categories]
+  );
 
   /**
    * Calculate remaining balance for a debt
    * @param {Object} debt - Debt object
    * @returns {number}
    */
-  const getRemainingDebt = (debt) => {
-    return calculateRemainingDebt(debt, debtReturns);
-  };
+  const getRemainingDebt = useCallback(
+    (debt) => {
+      return calculateRemainingDebt(debt, debtReturns);
+    },
+    [debtReturns]
+  );
 
   /**
    * Check if data is from sample (no Excel imported)

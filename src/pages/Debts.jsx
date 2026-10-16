@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { useFinance } from '../hooks/useFinance';
 import { PageHeader, Button, DeleteConfirmation } from '../components/common';
@@ -39,89 +39,118 @@ export default function Debts() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [debtForDetails, setDebtForDetails] = useState(null);
 
-  // Calculate remaining amount for a debt
-  const calculateRemaining = (debt) => {
-    const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
-    const totalReturned = debtReturns
-      .filter(ret => ret[COLUMNS.DEBT_RETURNS.DEBT_ID] === debtId)
-      .reduce((sum, ret) => sum + parseFloat(ret[COLUMNS.DEBT_RETURNS.AMOUNT] || 0), 0);
-    
-    return debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] - totalReturned;
-  };
+  // Create a map of debt returns by debt ID for O(1) lookups
+  const debtReturnsByDebtId = useMemo(() => {
+    const map = new Map();
+    debtReturns.forEach((ret) => {
+      const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
+      if (!map.has(debtId)) {
+        map.set(debtId, []);
+      }
+      map.get(debtId).push(ret);
+    });
+    return map;
+  }, [debtReturns]);
 
-  // Apply filters
-  const filteredDebts = filterDebts(debts, debtReturns, filters);
+  // Calculate remaining amount for a debt (memoized)
+  const calculateRemaining = useCallback(
+    (debt) => {
+      const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+      const returns = debtReturnsByDebtId.get(debtId) || [];
+      const totalReturned = returns.reduce(
+        (sum, ret) => sum + parseFloat(ret[COLUMNS.DEBT_RETURNS.AMOUNT] || 0),
+        0
+      );
+      return debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] - totalReturned;
+    },
+    [debtReturnsByDebtId]
+  );
+
+  // Memoize filtered debts to avoid recalculation on every render
+  const filteredDebts = useMemo(
+    () => filterDebts(debts, debtReturns, filters),
+    [debts, debtReturns, filters]
+  );
 
   // Handle filter changes
-  const handleFilterChange = (field, value) => {
+  const handleFilterChange = useCallback((field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
   // Handle add debt
-  const handleAddDebt = () => {
+  const handleAddDebt = useCallback(() => {
     setEditingDebt(null);
     setIsFormOpen(true);
-  };
+  }, []);
 
   // Handle edit debt
-  const handleEditDebt = (debt) => {
+  const handleEditDebt = useCallback((debt) => {
     setEditingDebt(debt);
     setIsFormOpen(true);
-  };
+  }, []);
 
   // Handle form submit
-  const handleFormSubmit = (debtData) => {
-    if (editingDebt) {
-      // Update existing debt
-      updateDebt(editingDebt[COLUMNS.DEBTS.DEBT_ID], debtData);
-    } else {
-      // Add new debt
-      addDebt(debtData);
-    }
-  };
+  const handleFormSubmit = useCallback(
+    (debtData) => {
+      if (editingDebt) {
+        // Update existing debt
+        updateDebt(editingDebt[COLUMNS.DEBTS.DEBT_ID], debtData);
+      } else {
+        // Add new debt
+        addDebt(debtData);
+      }
+    },
+    [editingDebt, updateDebt, addDebt]
+  );
 
   // Handle delete request
-  const handleDeleteRequest = (debt) => {
+  const handleDeleteRequest = useCallback((debt) => {
     setDebtToDelete(debt);
     setIsDeleteConfirmOpen(true);
-  };
+  }, []);
 
   // Handle delete confirmation
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = useCallback(() => {
     if (debtToDelete) {
       deleteDebt(debtToDelete[COLUMNS.DEBTS.DEBT_ID]);
       setDebtToDelete(null);
       setIsDeleteConfirmOpen(false);
     }
-  };
+  }, [debtToDelete, deleteDebt]);
 
   // Handle record payment
-  const handleRecordPayment = (debt) => {
+  const handleRecordPayment = useCallback((debt) => {
     setDebtForReturn(debt);
     setIsReturnFormOpen(true);
-  };
+  }, []);
 
   // Handle return form submit
-  const handleReturnFormSubmit = (returnData) => {
-    addDebtReturn(returnData);
-  };
+  const handleReturnFormSubmit = useCallback(
+    (returnData) => {
+      addDebtReturn(returnData);
+    },
+    [addDebtReturn]
+  );
 
   // Handle view payment history
-  const handleViewPayments = (debt) => {
+  const handleViewPayments = useCallback((debt) => {
     setDebtForReturnsList(debt);
     setIsReturnsListOpen(true);
-  };
+  }, []);
 
   // Handle delete return
-  const handleDeleteReturn = (returnId) => {
-    deleteDebtReturn(returnId);
-  };
+  const handleDeleteReturn = useCallback(
+    (returnId) => {
+      deleteDebtReturn(returnId);
+    },
+    [deleteDebtReturn]
+  );
 
   // Handle view details
-  const handleViewDetails = (debt) => {
+  const handleViewDetails = useCallback((debt) => {
     setDebtForDetails(debt);
     setIsDetailsOpen(true);
-  };
+  }, []);
 
   return (
     <div className="space-y-6">

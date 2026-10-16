@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { useFinance } from '../hooks/useFinance';
 import { PageHeader, Button, DeleteConfirmation } from '../components/common';
@@ -30,51 +30,57 @@ export default function Expenses() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState(null);
 
-  // Apply filters
-  const filteredExpenses = filterExpenses(expenses, filters);
+  // Memoize filtered expenses to avoid recalculation on every render
+  const filteredExpenses = useMemo(
+    () => filterExpenses(expenses, filters),
+    [expenses, filters]
+  );
 
   // Handle filter changes
-  const handleFilterChange = (field, value) => {
+  const handleFilterChange = useCallback((field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
   // Handle add expense
-  const handleAddExpense = () => {
+  const handleAddExpense = useCallback(() => {
     setEditingExpense(null);
     setIsFormOpen(true);
-  };
+  }, []);
 
   // Handle edit expense
-  const handleEditExpense = (expense) => {
+  const handleEditExpense = useCallback((expense) => {
     setEditingExpense(expense);
     setIsFormOpen(true);
-  };
+  }, []);
 
   // Handle form submit
-  const handleFormSubmit = (expenseData) => {
-    if (editingExpense) {
-      // Update existing expense
-      updateExpense(editingExpense[COLUMNS.EXPENSES.EXPENSE_ID], expenseData);
-    } else {
-      // Add new expense
-      addExpense(expenseData);
-    }
-  };
+  const handleFormSubmit = useCallback(
+    (expenseData) => {
+      if (editingExpense) {
+        // Update existing expense
+        updateExpense(editingExpense[COLUMNS.EXPENSES.EXPENSE_ID], expenseData);
+      } else {
+        // Add new expense
+        addExpense(expenseData);
+      }
+    },
+    [editingExpense, updateExpense, addExpense]
+  );
 
   // Handle delete request
-  const handleDeleteRequest = (expense) => {
+  const handleDeleteRequest = useCallback((expense) => {
     setExpenseToDelete(expense);
     setIsDeleteConfirmOpen(true);
-  };
+  }, []);
 
   // Handle delete confirmation
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = useCallback(() => {
     if (expenseToDelete) {
       deleteExpense(expenseToDelete[COLUMNS.EXPENSES.EXPENSE_ID]);
       setExpenseToDelete(null);
       setIsDeleteConfirmOpen(false);
     }
-  };
+  }, [expenseToDelete, deleteExpense]);
 
   return (
     <div className="space-y-6">

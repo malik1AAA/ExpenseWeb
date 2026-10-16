@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { COLUMNS, DEBT_DIRECTION } from '../../config/excelSchema';
@@ -7,66 +8,97 @@ import { COLUMNS, DEBT_DIRECTION } from '../../config/excelSchema';
  * Displays comprehensive debt statistics with separate sections for Lent and Borrowed
  */
 export default function DebtStatistics({ debts = [], debtReturns = [] }) {
-  // Helper function to calculate totals for a specific direction
-  const calculateDebtStats = (direction) => {
-    const directionDebts = debts.filter(
-      (d) => d[COLUMNS.DEBTS.DIRECTION] === direction
-    );
+  // Create a map of debt returns by debt ID for O(1) lookups
+  const debtReturnsByDebtId = useMemo(() => {
+    const map = new Map();
+    debtReturns.forEach((ret) => {
+      const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
+      if (!map.has(debtId)) {
+        map.set(debtId, []);
+      }
+      map.get(debtId).push(ret);
+    });
+    return map;
+  }, [debtReturns]);
 
-    // Calculate total original amount
-    const totalOriginal = directionDebts.reduce(
-      (sum, d) => sum + parseFloat(d[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0),
-      0
-    );
+  // Helper function to calculate totals for a specific direction (memoized)
+  const calculateDebtStats = useMemo(() => {
+    return (direction) => {
+      const directionDebts = debts.filter(
+        (d) => d[COLUMNS.DEBTS.DIRECTION] === direction
+      );
 
-    // Calculate total returned
-    const totalReturned = directionDebts.reduce((sum, debt) => {
-      const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
-      const debtReturnsSum = debtReturns
-        .filter((r) => r[COLUMNS.DEBT_RETURNS.DEBT_ID] === debtId)
-        .reduce((rSum, r) => rSum + parseFloat(r[COLUMNS.DEBT_RETURNS.AMOUNT] || 0), 0);
-      return sum + debtReturnsSum;
-    }, 0);
+      // Calculate total original amount
+      const totalOriginal = directionDebts.reduce(
+        (sum, d) => sum + parseFloat(d[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0),
+        0
+      );
 
-    // Calculate outstanding (remaining)
-    const outstanding = totalOriginal - totalReturned;
+      // Calculate total returned using the map for O(1) lookups
+      const totalReturned = directionDebts.reduce((sum, debt) => {
+        const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+        const returns = debtReturnsByDebtId.get(debtId) || [];
+        const debtReturnsSum = returns.reduce(
+          (rSum, r) => rSum + parseFloat(r[COLUMNS.DEBT_RETURNS.AMOUNT] || 0),
+          0
+        );
+        return sum + debtReturnsSum;
+      }, 0);
 
-    // Count active debts (not fully paid)
-    const activeCount = directionDebts.filter((debt) => {
-      const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
-      const returned = debtReturns
-        .filter((r) => r[COLUMNS.DEBT_RETURNS.DEBT_ID] === debtId)
-        .reduce((sum, r) => sum + parseFloat(r[COLUMNS.DEBT_RETURNS.AMOUNT] || 0), 0);
-      const original = parseFloat(debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0);
-      return returned < original;
-    }).length;
+      // Calculate outstanding (remaining)
+      const outstanding = totalOriginal - totalReturned;
 
-    return {
-      totalOriginal,
-      totalReturned,
-      outstanding,
-      activeCount,
+      // Count active debts (not fully paid)
+      const activeCount = directionDebts.filter((debt) => {
+        const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+        const returns = debtReturnsByDebtId.get(debtId) || [];
+        const returned = returns.reduce(
+          (sum, r) => sum + parseFloat(r[COLUMNS.DEBT_RETURNS.AMOUNT] || 0),
+          0
+        );
+        const original = parseFloat(debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0);
+        return returned < original;
+      }).length;
+
+      return {
+        totalOriginal,
+        totalReturned,
+        outstanding,
+        activeCount,
+      };
     };
-  };
+  }, [debts, debtReturnsByDebtId]);
 
   // Calculate statistics for Lent and Borrowed
-  const lentStats = calculateDebtStats(DEBT_DIRECTION.LENT);
-  const borrowedStats = calculateDebtStats(DEBT_DIRECTION.BORROWED);
+  const lentStats = useMemo(
+    () => calculateDebtStats(DEBT_DIRECTION.LENT),
+    [calculateDebtStats]
+  );
+  
+  const borrowedStats = useMemo(
+    () => calculateDebtStats(DEBT_DIRECTION.BORROWED),
+    [calculateDebtStats]
+  );
 
-  // Count overdue debts
-  const overdueCount = debts.filter((debt) => {
-    const dueDate = debt[COLUMNS.DEBTS.DUE_DATE];
-    if (!dueDate) return false;
+  // Count overdue debts (memoized)
+  const overdueCount = useMemo(() => {
+    const now = new Date();
+    return debts.filter((debt) => {
+      const dueDate = debt[COLUMNS.DEBTS.DUE_DATE];
+      if (!dueDate) return false;
 
-    const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
-    const returned = debtReturns
-      .filter((r) => r[COLUMNS.DEBT_RETURNS.DEBT_ID] === debtId)
-      .reduce((sum, r) => sum + parseFloat(r[COLUMNS.DEBT_RETURNS.AMOUNT] || 0), 0);
-    const original = parseFloat(debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0);
+      const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+      const returns = debtReturnsByDebtId.get(debtId) || [];
+      const returned = returns.reduce(
+        (sum, r) => sum + parseFloat(r[COLUMNS.DEBT_RETURNS.AMOUNT] || 0),
+        0
+      );
+      const original = parseFloat(debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0);
 
-    // Debt is overdue if not fully paid and past due date
-    return returned < original && new Date(dueDate) < new Date();
-  }).length;
+      // Debt is overdue if not fully paid and past due date
+      return returned < original && new Date(dueDate) < now;
+    }).length;
+  }, [debts, debtReturnsByDebtId]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

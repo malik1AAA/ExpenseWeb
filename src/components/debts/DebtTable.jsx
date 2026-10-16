@@ -1,3 +1,4 @@
+import { useMemo, useCallback } from 'react';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { formatDate } from '../../utils/dateUtils';
 import { COLUMNS, DEBT_DIRECTION } from '../../config/excelSchema';
@@ -14,21 +15,40 @@ export default function DebtTable({
   onDelete,
   onRecordReturn,
   onViewDetails
-}) {  // Calculate remaining amount for a debt
-  const calculateRemaining = (debt) => {
-    const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
-    const totalReturned = debtReturns
-      .filter(ret => ret[COLUMNS.DEBT_RETURNS.DEBT_ID] === debtId)
-      .reduce((sum, ret) => sum + parseFloat(ret[COLUMNS.DEBT_RETURNS.AMOUNT] || 0), 0);
-    
-    return {
-      totalReturned,
-      remaining: debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] - totalReturned,
-    };
-  };
+}) {
+  // Create a map of debt returns by debt ID for O(1) lookups
+  const debtReturnsByDebtId = useMemo(() => {
+    const map = new Map();
+    debtReturns.forEach((ret) => {
+      const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
+      if (!map.has(debtId)) {
+        map.set(debtId, []);
+      }
+      map.get(debtId).push(ret);
+    });
+    return map;
+  }, [debtReturns]);
+
+  // Calculate remaining amount for a debt (memoized)
+  const calculateRemaining = useCallback(
+    (debt) => {
+      const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+      const returns = debtReturnsByDebtId.get(debtId) || [];
+      const totalReturned = returns.reduce(
+        (sum, ret) => sum + parseFloat(ret[COLUMNS.DEBT_RETURNS.AMOUNT] || 0),
+        0
+      );
+      
+      return {
+        totalReturned,
+        remaining: debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] - totalReturned,
+      };
+    },
+    [debtReturnsByDebtId]
+  );
 
   // Determine debt status
-  const getStatus = (debt, totalReturned, remaining) => {
+  const getStatus = useCallback((debt, totalReturned, remaining) => {
     if (remaining <= 0) return 'Paid';
     if (totalReturned > 0 && remaining > 0) return 'Partial';
     
@@ -37,17 +57,18 @@ export default function DebtTable({
     if (totalReturned === 0 && dueDate < now) return 'Overdue';
     
     return 'Active';
-  };
+  }, []);
 
-  // Sort by due date (earliest first)
-  // Note: debts are already filtered by the parent component
-  const sortedDebts = [...debts].sort((a, b) => {
-    const dateA = new Date(a[COLUMNS.DEBTS.DUE_DATE]);
-    const dateB = new Date(b[COLUMNS.DEBTS.DUE_DATE]);
-    return dateA - dateB;
-  });
+  // Sort by due date (earliest first) - memoized
+  const sortedDebts = useMemo(() => {
+    return [...debts].sort((a, b) => {
+      const dateA = new Date(a[COLUMNS.DEBTS.DUE_DATE]);
+      const dateB = new Date(b[COLUMNS.DEBTS.DUE_DATE]);
+      return dateA - dateB;
+    });
+  }, [debts]);
 
-  const getStatusColor = (status) => {
+  const getStatusColor = useCallback((status) => {
     switch (status) {
       case 'Paid':
         return 'bg-green-100 text-green-700';
@@ -60,7 +81,7 @@ export default function DebtTable({
       default:
         return 'bg-surface-100 text-surface-700';
     }
-  };
+  }, []);
 
   if (sortedDebts.length === 0) {
     return (

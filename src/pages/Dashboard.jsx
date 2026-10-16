@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useFinance } from '../hooks/useFinance';
 import { getCurrentYearMonth, getMonthlyTotal, getAnnualTotal } from '../services/calculationService';
 import {
@@ -28,9 +28,16 @@ export default function Dashboard() {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
-  // Calculate all metrics dynamically
-  const monthlySpending = getMonthlyTotal(expenses, selectedYear, selectedMonth);
-  const annualSpending = getAnnualTotal(expenses, selectedYear);
+  // Memoize expensive calculations
+  const monthlySpending = useMemo(
+    () => getMonthlyTotal(expenses, selectedYear, selectedMonth),
+    [expenses, selectedYear, selectedMonth]
+  );
+  
+  const annualSpending = useMemo(
+    () => getAnnualTotal(expenses, selectedYear),
+    [expenses, selectedYear]
+  );
 
   return (
     <div className="space-y-8">
