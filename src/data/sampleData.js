@@ -73,7 +73,7 @@ export const sampleCategories = [
 // Sample Expenses
 export const sampleExpenses = [
   {
-    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP001',
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP_1',
     [COLUMNS.EXPENSES.DATE]: '2024-01-15',
     [COLUMNS.EXPENSES.DESCRIPTION]: 'Grocery Store',
     [COLUMNS.EXPENSES.CATEGORY]: 'food',
@@ -82,7 +82,7 @@ export const sampleExpenses = [
     [COLUMNS.EXPENSES.NOTES]: 'Weekly groceries',
   },
   {
-    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP002',
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP_2',
     [COLUMNS.EXPENSES.DATE]: '2024-01-14',
     [COLUMNS.EXPENSES.DESCRIPTION]: 'Gas Station',
     [COLUMNS.EXPENSES.CATEGORY]: 'transport',
@@ -91,7 +91,7 @@ export const sampleExpenses = [
     [COLUMNS.EXPENSES.NOTES]: '',
   },
   {
-    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP003',
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP_3',
     [COLUMNS.EXPENSES.DATE]: '2024-01-13',
     [COLUMNS.EXPENSES.DESCRIPTION]: 'Monthly Rent',
     [COLUMNS.EXPENSES.CATEGORY]: 'rent',
@@ -100,7 +100,7 @@ export const sampleExpenses = [
     [COLUMNS.EXPENSES.NOTES]: 'January rent',
   },
   {
-    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP004',
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP_4',
     [COLUMNS.EXPENSES.DATE]: '2024-01-12',
     [COLUMNS.EXPENSES.DESCRIPTION]: 'Electric Bill',
     [COLUMNS.EXPENSES.CATEGORY]: 'utilities',
@@ -109,7 +109,7 @@ export const sampleExpenses = [
     [COLUMNS.EXPENSES.NOTES]: '',
   },
   {
-    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP005',
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP_5',
     [COLUMNS.EXPENSES.DATE]: '2024-01-11',
     [COLUMNS.EXPENSES.DESCRIPTION]: 'Movie Tickets',
     [COLUMNS.EXPENSES.CATEGORY]: 'entertainment',
@@ -118,7 +118,7 @@ export const sampleExpenses = [
     [COLUMNS.EXPENSES.NOTES]: 'Weekend movie',
   },
   {
-    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP006',
+    [COLUMNS.EXPENSES.EXPENSE_ID]: 'EXP_6',
     [COLUMNS.EXPENSES.DATE]: '2024-01-10',
     [COLUMNS.EXPENSES.DESCRIPTION]: 'Restaurant Dinner',
     [COLUMNS.EXPENSES.CATEGORY]: 'food',
@@ -131,7 +131,7 @@ export const sampleExpenses = [
 // Sample Debts
 export const sampleDebts = [
   {
-    [COLUMNS.DEBTS.DEBT_ID]: 'DEBT001',
+    [COLUMNS.DEBTS.DEBT_ID]: 'DEBT_1',
     [COLUMNS.DEBTS.PERSON]: 'John Smith',
     [COLUMNS.DEBTS.DEBT_CATEGORY]: DEBT_CATEGORY.CASH,
     [COLUMNS.DEBTS.DIRECTION]: DEBT_DIRECTION.LENT,
@@ -141,7 +141,7 @@ export const sampleDebts = [
     [COLUMNS.DEBTS.NOTES]: 'Emergency loan',
   },
   {
-    [COLUMNS.DEBTS.DEBT_ID]: 'DEBT002',
+    [COLUMNS.DEBTS.DEBT_ID]: 'DEBT_2',
     [COLUMNS.DEBTS.PERSON]: 'Sarah Johnson',
     [COLUMNS.DEBTS.DEBT_CATEGORY]: DEBT_CATEGORY.FOOD,
     [COLUMNS.DEBTS.DIRECTION]: DEBT_DIRECTION.BORROWED,
@@ -151,7 +151,7 @@ export const sampleDebts = [
     [COLUMNS.DEBTS.NOTES]: 'Grocery money',
   },
   {
-    [COLUMNS.DEBTS.DEBT_ID]: 'DEBT003',
+    [COLUMNS.DEBTS.DEBT_ID]: 'DEBT_3',
     [COLUMNS.DEBTS.PERSON]: 'Mike Davis',
     [COLUMNS.DEBTS.DEBT_CATEGORY]: DEBT_CATEGORY.CASH,
     [COLUMNS.DEBTS.DIRECTION]: DEBT_DIRECTION.LENT,
@@ -165,15 +165,15 @@ export const sampleDebts = [
 // Sample Debt Returns
 export const sampleDebtReturns = [
   {
-    [COLUMNS.DEBT_RETURNS.RETURN_ID]: 'RET001',
-    [COLUMNS.DEBT_RETURNS.DEBT_ID]: 'DEBT001',
+    [COLUMNS.DEBT_RETURNS.RETURN_ID]: 'RET_1',
+    [COLUMNS.DEBT_RETURNS.DEBT_ID]: 'DEBT_1',
     [COLUMNS.DEBT_RETURNS.DATE]: '2024-01-20',
     [COLUMNS.DEBT_RETURNS.AMOUNT]: 250.00,
     [COLUMNS.DEBT_RETURNS.NOTES]: 'Partial payment',
   },
   {
-    [COLUMNS.DEBT_RETURNS.RETURN_ID]: 'RET002',
-    [COLUMNS.DEBT_RETURNS.DEBT_ID]: 'DEBT002',
+    [COLUMNS.DEBT_RETURNS.RETURN_ID]: 'RET_2',
+    [COLUMNS.DEBT_RETURNS.DEBT_ID]: 'DEBT_2',
     [COLUMNS.DEBT_RETURNS.DATE]: '2024-01-15',
     [COLUMNS.DEBT_RETURNS.AMOUNT]: 75.00,
     [COLUMNS.DEBT_RETURNS.NOTES]: 'Full payment',

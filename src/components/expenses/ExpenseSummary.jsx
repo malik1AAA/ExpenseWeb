@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { COLUMNS } from '../../config/excelSchema';
 import { Receipt, DollarSign, TrendingUp, ArrowUpRight } from 'lucide-react';
@@ -7,46 +8,49 @@ import { Receipt, DollarSign, TrendingUp, ArrowUpRight } from 'lucide-react';
  * Displays count, total, average, and largest expense
  */
 export default function ExpenseSummary({ expenses = [] }) {
-  const count = expenses.length;
+  // Memoize all calculations
+  const stats = useMemo(() => {
+    const count = expenses.length;
 
-  const total = expenses.reduce((sum, expense) => {
-    const amount = parseFloat(expense[COLUMNS.EXPENSES.AMOUNT]) || 0;
-    return sum + amount;
-  }, 0);
+    const total = expenses.reduce((sum, expense) => {
+      const amount = parseFloat(expense[COLUMNS.EXPENSES.AMOUNT]) || 0;
+      return sum + amount;
+    }, 0);
 
-  const average = count > 0 ? total / count : 0;
+    const average = count > 0 ? total / count : 0;
 
-  const largest = expenses.reduce((max, expense) => {
-    const amount = parseFloat(expense[COLUMNS.EXPENSES.AMOUNT]) || 0;
-    return amount > max ? amount : max;
-  }, 0);
+    const largest = expenses.reduce((max, expense) => {
+      const amount = parseFloat(expense[COLUMNS.EXPENSES.AMOUNT]) || 0;
+      return amount > max ? amount : max;
+    }, 0);
 
-  const stats = [
-    {
-      label: 'Filtered Expenses',
-      value: count.toString(),
-      icon: Receipt,
-      color: 'blue',
-    },
-    {
-      label: 'Total Amount',
-      value: formatCurrency(total),
-      icon: DollarSign,
-      color: 'green',
-    },
-    {
-      label: 'Average Expense',
-      value: formatCurrency(average),
-      icon: TrendingUp,
-      color: 'purple',
-    },
-    {
-      label: 'Largest Expense',
-      value: formatCurrency(largest),
-      icon: ArrowUpRight,
-      color: 'amber',
-    },
-  ];
+    return [
+      {
+        label: 'Filtered Expenses',
+        value: count.toString(),
+        icon: Receipt,
+        color: 'blue',
+      },
+      {
+        label: 'Total Amount',
+        value: formatCurrency(total),
+        icon: DollarSign,
+        color: 'green',
+      },
+      {
+        label: 'Average Expense',
+        value: formatCurrency(average),
+        icon: TrendingUp,
+        color: 'purple',
+      },
+      {
+        label: 'Largest Expense',
+        value: formatCurrency(largest),
+        icon: ArrowUpRight,
+        color: 'amber',
+      },
+    ];
+  }, [expenses]);
 
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-600',

@@ -9,7 +9,7 @@ import {
   Download,
   Upload,
 } from "lucide-react";
-import { ExcelManager, CategoryManager } from '../components/settings';
+import { ExcelManager, CategoryManager, DataIntegrityChecker } from '../components/settings';
 
 function Settings() {
   return (
@@ -31,6 +31,9 @@ function Settings() {
 
           {/* Category Management */}
           <CategoryManager />
+
+          {/* Data Integrity Checker */}
+          <DataIntegrityChecker />
 
           {/* Appearance */}
           <div className="bg-white rounded-xl border border-surface-200 p-6">

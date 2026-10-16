@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { getCategoryTotals } from '../../services/calculationService';
 import { formatCurrency } from '../../utils/currencyUtils';
@@ -6,13 +7,15 @@ import { formatCurrency } from '../../utils/currencyUtils';
  * CategoryBreakdownChart - Pie chart showing category breakdown
  */
 export default function CategoryBreakdownChart({ expenses, year, month, getCategoryName, getCategoryColor }) {
-  const categoryTotals = getCategoryTotals(expenses, year, month);
-
-  const chartData = Object.entries(categoryTotals).map(([categoryId, total]) => ({
-    name: getCategoryName(categoryId),
-    value: total,
-    color: getCategoryColor(categoryId),
-  }));
+  // Memoize chart data generation
+  const chartData = useMemo(() => {
+    const categoryTotals = getCategoryTotals(expenses, year, month);
+    return Object.entries(categoryTotals).map(([categoryId, total]) => ({
+      name: getCategoryName(categoryId),
+      value: total,
+      color: getCategoryColor(categoryId),
+    }));
+  }, [expenses, year, month, getCategoryName, getCategoryColor]);
 
   const hasData = chartData.length > 0;
 

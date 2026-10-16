@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { getMonthlyTotalsForYear, getShortMonthName } from '../../services/calculationService';
 import { formatCurrency } from '../../utils/currencyUtils';
@@ -6,14 +7,19 @@ import { formatCurrency } from '../../utils/currencyUtils';
  * MonthlySpendingChart - Bar chart showing monthly spending trend
  */
 export default function MonthlySpendingChart({ expenses, year }) {
-  const monthlyTotals = getMonthlyTotalsForYear(expenses, year);
+  // Memoize chart data generation
+  const chartData = useMemo(() => {
+    const monthlyTotals = getMonthlyTotalsForYear(expenses, year);
+    return monthlyTotals.map((item) => ({
+      month: getShortMonthName(item.month),
+      total: item.total,
+    }));
+  }, [expenses, year]);
 
-  const chartData = monthlyTotals.map((item) => ({
-    month: getShortMonthName(item.month),
-    total: item.total,
-  }));
-
-  const hasData = chartData.some((item) => item.total > 0);
+  const hasData = useMemo(
+    () => chartData.some((item) => item.total > 0),
+    [chartData]
+  );
 
   if (!hasData) {
     return (

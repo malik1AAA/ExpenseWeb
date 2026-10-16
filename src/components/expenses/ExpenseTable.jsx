@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Edit, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Receipt } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { formatDate } from '../../utils/dateUtils';
@@ -30,52 +30,73 @@ export default function ExpenseTable({
     setCurrentPage(1);
   }, [expenses]);
 
-  // Get category name by ID
-  const getCategoryName = (categoryId) => {
-    const category = categories.find(
-      (cat) => cat[COLUMNS.CATEGORIES.CATEGORY_ID] === categoryId
-    );
-    return category ? category[COLUMNS.CATEGORIES.CATEGORY_NAME] : categoryId;
-  };
+  // Create a category map for O(1) lookups
+  const categoryMap = useMemo(() => {
+    const map = new Map();
+    categories.forEach((cat) => {
+      map.set(cat[COLUMNS.CATEGORIES.CATEGORY_ID], cat);
+    });
+    return map;
+  }, [categories]);
 
-  // Sort expenses
-  const sortedExpenses = [...expenses].sort((a, b) => {
-    let aVal = a[sortField];
-    let bVal = b[sortField];
+  // Get category name by ID (memoized)
+  const getCategoryName = useCallback(
+    (categoryId) => {
+      const category = categoryMap.get(categoryId);
+      return category ? category[COLUMNS.CATEGORIES.CATEGORY_NAME] : categoryId;
+    },
+    [categoryMap]
+  );
 
-    // Handle numeric fields
-    if (sortField === COLUMNS.EXPENSES.AMOUNT) {
-      aVal = parseFloat(aVal) || 0;
-      bVal = parseFloat(bVal) || 0;
-    }
+  // Sort expenses (memoized)
+  const sortedExpenses = useMemo(() => {
+    return [...expenses].sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
 
-    // Handle date fields
-    if (sortField === COLUMNS.EXPENSES.DATE) {
-      aVal = new Date(aVal);
-      bVal = new Date(bVal);
-    }
+      // Handle numeric fields
+      if (sortField === COLUMNS.EXPENSES.AMOUNT) {
+        aVal = parseFloat(aVal) || 0;
+        bVal = parseFloat(bVal) || 0;
+      }
 
-    if (sortDirection === 'asc') {
-      return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
-    } else {
-      return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
-    }
-  });
+      // Handle date fields
+      if (sortField === COLUMNS.EXPENSES.DATE) {
+        aVal = new Date(aVal);
+        bVal = new Date(bVal);
+      }
 
-  // Pagination
-  const totalPages = Math.ceil(sortedExpenses.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedExpenses = sortedExpenses.slice(startIndex, startIndex + itemsPerPage);
+      if (sortDirection === 'asc') {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+      }
+    });
+  }, [expenses, sortField, sortDirection]);
 
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('desc');
-    }
-    setCurrentPage(1);
-  };
+  // Pagination (memoized)
+  const totalPages = useMemo(
+    () => Math.ceil(sortedExpenses.length / itemsPerPage),
+    [sortedExpenses.length, itemsPerPage]
+  );
+  
+  const paginatedExpenses = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedExpenses.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedExpenses, currentPage, itemsPerPage]);
+
+  const handleSort = useCallback(
+    (field) => {
+      if (sortField === field) {
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      } else {
+        setSortField(field);
+        setSortDirection('desc');
+      }
+      setCurrentPage(1);
+    },
+    [sortField, sortDirection]
+  );
 
   const getSortIcon = (field) => {
     if (sortField !== field) {
