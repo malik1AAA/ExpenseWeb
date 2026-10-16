@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Plus, ArrowUpRight, ArrowDownRight, List } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useFinance } from '../hooks/useFinance';
 import { PageHeader, Button, DeleteConfirmation } from '../components/common';
-import { DebtSummary, DebtTable, DebtForm, DebtReturnForm, DebtReturnsList, DebtDetails } from '../components/debts';
+import { DebtSummary, DebtTable, DebtForm, DebtReturnForm, DebtReturnsList, DebtDetails, DebtFilters } from '../components/debts';
 import { COLUMNS, DEBT_DIRECTION } from '../config/excelSchema';
 import { Modal } from '../components/common';
+import { filterDebts } from '../services/debtFilterService';
 
 export default function Debts() {
   const {
@@ -17,8 +18,14 @@ export default function Debts() {
     deleteDebtReturn,
   } = useFinance();
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState('all');
+  // Filter state
+  const [filters, setFilters] = useState({
+    search: '',
+    direction: 'all',
+    status: 'all',
+    startDate: '',
+    endDate: '',
+  });
 
   // Modal state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -40,6 +47,14 @@ export default function Debts() {
       .reduce((sum, ret) => sum + parseFloat(ret[COLUMNS.DEBT_RETURNS.AMOUNT] || 0), 0);
     
     return debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] - totalReturned;
+  };
+
+  // Apply filters
+  const filteredDebts = filterDebts(debts, debtReturns, filters);
+
+  // Handle filter changes
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   // Handle add debt
@@ -108,19 +123,6 @@ export default function Debts() {
     setIsDetailsOpen(true);
   };
 
-  // Get direction for new debt based on active tab
-  const getDefaultDirection = () => {
-    if (activeTab === 'lent') return DEBT_DIRECTION.LENT;
-    if (activeTab === 'borrowed') return DEBT_DIRECTION.BORROWED;
-    return DEBT_DIRECTION.LENT;
-  };
-
-  const tabs = [
-    { id: 'all', label: 'All Debts', icon: List },
-    { id: 'lent', label: 'Money Lent', icon: ArrowUpRight },
-    { id: 'borrowed', label: 'Money Borrowed', icon: ArrowDownRight },
-  ];
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -136,31 +138,13 @@ export default function Debts() {
       {/* Summary */}
       <DebtSummary debts={debts} debtReturns={debtReturns} />
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl border border-surface-200 p-2">
-        <div className="flex gap-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-surface-50 text-surface-700 hover:bg-surface-100'
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Filters */}
+      <DebtFilters filters={filters} onFilterChange={handleFilterChange} />
 
       {/* Debt Table */}
       <DebtTable
-        debts={debts}
+        debts={filteredDebts}
         debtReturns={debtReturns}
-        direction={activeTab === 'all' ? 'all' : activeTab === 'lent' ? DEBT_DIRECTION.LENT : DEBT_DIRECTION.BORROWED}
         onEdit={handleEditDebt}
         onDelete={handleDeleteRequest}
         onRecordReturn={handleRecordPayment}
@@ -173,7 +157,6 @@ export default function Debts() {
         onClose={() => setIsFormOpen(false)}
         onSubmit={handleFormSubmit}
         debt={editingDebt}
-        defaultDirection={getDefaultDirection()}
       />
 
       {/* Delete Confirmation Modal */}
