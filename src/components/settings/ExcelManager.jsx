@@ -94,7 +94,8 @@ export default function ExcelManager() {
       categories,
     };
 
-    await handleExport(data, 'finance-data');
+    // Use auto-generated filename with date
+    await handleExport(data);
   };
 
   /**

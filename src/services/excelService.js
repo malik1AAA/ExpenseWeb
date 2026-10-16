@@ -580,6 +580,70 @@ export const readExcelFile = (file) => {
 // ============================================================================
 
 /**
+ * Sort expenses by date descending
+ * @param {Array} expenses - Array of expense objects
+ * @returns {Array} Sorted expenses
+ */
+const sortExpensesByDate = (expenses) => {
+  return [...expenses].sort((a, b) => {
+    const dateA = new Date(a[COLUMNS.EXPENSES.DATE] || 0);
+    const dateB = new Date(b[COLUMNS.EXPENSES.DATE] || 0);
+    return dateB - dateA; // Descending
+  });
+};
+
+/**
+ * Sort debts by date descending
+ * @param {Array} debts - Array of debt objects
+ * @returns {Array} Sorted debts
+ */
+const sortDebtsByDate = (debts) => {
+  return [...debts].sort((a, b) => {
+    const dateA = new Date(a[COLUMNS.DEBTS.DATE] || 0);
+    const dateB = new Date(b[COLUMNS.DEBTS.DATE] || 0);
+    return dateB - dateA; // Descending
+  });
+};
+
+/**
+ * Sort debt returns by date descending
+ * @param {Array} debtReturns - Array of debt return objects
+ * @returns {Array} Sorted debt returns
+ */
+const sortDebtReturnsByDate = (debtReturns) => {
+  return [...debtReturns].sort((a, b) => {
+    const dateA = new Date(a[COLUMNS.DEBT_RETURNS.DATE] || 0);
+    const dateB = new Date(b[COLUMNS.DEBT_RETURNS.DATE] || 0);
+    return dateB - dateA; // Descending
+  });
+};
+
+/**
+ * Sort categories alphabetically by name
+ * @param {Array} categories - Array of category objects
+ * @returns {Array} Sorted categories
+ */
+const sortCategoriesAlphabetically = (categories) => {
+  return [...categories].sort((a, b) => {
+    const nameA = (a[COLUMNS.CATEGORIES.CATEGORY_NAME] || '').toLowerCase();
+    const nameB = (b[COLUMNS.CATEGORIES.CATEGORY_NAME] || '').toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+};
+
+/**
+ * Generate export filename with current date
+ * @returns {string} Filename in format: PersonalFinance_YYYY-MM-DD
+ */
+const generateExportFilename = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `PersonalFinance_${year}-${month}-${day}`;
+};
+
+/**
  * Create an XLSX workbook from structured data
  * 
  * @param {{
@@ -593,37 +657,48 @@ export const readExcelFile = (file) => {
 export const createWorkbook = (data) => {
   const workbook = XLSX.utils.book_new();
   
-  // Sheet configuration: name, data key, column order
+  // Sheet configuration: name, data key, column order, sort function
   const sheetsConfig = [
     { 
       name: SHEET_NAMES.EXPENSES, 
       key: 'expenses',
-      columns: SHEET_COLUMNS[SHEET_NAMES.EXPENSES] 
+      columns: SHEET_COLUMNS[SHEET_NAMES.EXPENSES],
+      sort: sortExpensesByDate
     },
     { 
       name: SHEET_NAMES.DEBTS, 
       key: 'debts',
-      columns: SHEET_COLUMNS[SHEET_NAMES.DEBTS] 
+      columns: SHEET_COLUMNS[SHEET_NAMES.DEBTS],
+      sort: sortDebtsByDate
     },
     { 
       name: SHEET_NAMES.DEBT_RETURNS, 
       key: 'debtReturns',
-      columns: SHEET_COLUMNS[SHEET_NAMES.DEBT_RETURNS] 
+      columns: SHEET_COLUMNS[SHEET_NAMES.DEBT_RETURNS],
+      sort: sortDebtReturnsByDate
     },
     { 
       name: SHEET_NAMES.CATEGORIES, 
       key: 'categories',
-      columns: SHEET_COLUMNS[SHEET_NAMES.CATEGORIES] 
+      columns: SHEET_COLUMNS[SHEET_NAMES.CATEGORIES],
+      sort: sortCategoriesAlphabetically
     },
   ];
   
-  sheetsConfig.forEach(({ name, key, columns }) => {
-    const sheetData = data[key] || [];
+  sheetsConfig.forEach(({ name, key, columns, sort }) => {
+    let sheetData = data[key] || [];
+    
+    // Sort data if sort function provided
+    if (sort && sheetData.length > 0) {
+      sheetData = sort(sheetData);
+    }
     
     // Ensure all rows have the correct column structure
+    // Only include schema-defined columns (no calculated fields)
     const formattedData = sheetData.map(row => {
       const formatted = {};
       columns.forEach(col => {
+        // Only include columns defined in schema
         formatted[col] = row[col] !== undefined ? row[col] : '';
       });
       return formatted;
@@ -673,15 +748,18 @@ const createEmptyRow = (columns) => {
  *   debtReturns?: Array,
  *   categories?: Array
  * }} data - Data object with arrays for each sheet
- * @param {string} filename - Output filename (without extension)
+ * @param {string} filename - Output filename (without extension). If not provided, auto-generates with date.
  * @returns {boolean} True if export succeeded
  */
-export const exportToExcel = (data, filename = 'finance-data') => {
+export const exportToExcel = (data, filename = null) => {
   try {
     const workbook = createWorkbook(data);
     
+    // Generate filename with date if not provided
+    const exportFilename = filename || generateExportFilename();
+    
     // Sanitize filename
-    const safeFilename = filename.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const safeFilename = exportFilename.replace(/[^a-zA-Z0-9_-]/g, '_');
     
     XLSX.writeFile(workbook, `${safeFilename}.xlsx`);
     return true;
