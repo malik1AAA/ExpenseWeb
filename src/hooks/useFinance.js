@@ -160,6 +160,7 @@ export function useFinance() {
     currentExcelFileName,
     loading,
     errors,
+    dataLoaded: context.dataLoaded,
 
     // Computed values (derived)
     totalExpenses,
