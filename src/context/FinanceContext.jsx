@@ -124,7 +124,8 @@ export function FinanceProvider({ children }) {
   // ---------------------------------------------------------------------------
 
   /**
-   * Replace all financial data with imported data from an Excel file.
+   * Import financial data from an Excel file.
+   * Supports both replace and merge modes.
    * Saves to Supabase if user is authenticated.
    *
    * @param {{
@@ -135,8 +136,9 @@ export function FinanceProvider({ children }) {
    *   fileName?: string,
    *   errors?: string[]
    * }} data
+   * @param {string} mode - 'replace' or 'merge'
    */
-  const importFinanceData = useCallback(async (data) => {
+  const importFinanceData = useCallback(async (data, mode = 'replace') => {
     if (!data || typeof data !== 'object') {
       setErrors(['Invalid data provided to importFinanceData']);
       return;
@@ -148,26 +150,70 @@ export function FinanceProvider({ children }) {
       setErrors([]);
     }
 
-    const expenses = Array.isArray(data.expenses) ? data.expenses : [];
-    const debts = Array.isArray(data.debts) ? data.debts : [];
-    const debtReturns = Array.isArray(data.debtReturns) ? data.debtReturns : [];
-    const categories = Array.isArray(data.categories) ? data.categories : [];
+    const newExpenses = Array.isArray(data.expenses) ? data.expenses : [];
+    const newDebts = Array.isArray(data.debts) ? data.debts : [];
+    const newDebtReturns = Array.isArray(data.debtReturns) ? data.debtReturns : [];
+    const newCategories = Array.isArray(data.categories) ? data.categories : [];
+
+    let finalExpenses, finalDebts, finalDebtReturns, finalCategories;
+
+    if (mode === 'merge') {
+      // Merge mode: combine existing data with new data, skip duplicates
+      const existingExpenseIds = new Set(expenses.map(e => e[EXPENSE_ID]));
+      const existingDebtIds = new Set(debts.map(d => d[DEBT_ID]));
+      const existingReturnIds = new Set(debtReturns.map(r => r[RETURN_ID]));
+      const existingCategoryIds = new Set(categories.map(c => c[CATEGORY_ID]));
+
+      finalExpenses = [
+        ...expenses,
+        ...newExpenses.filter(e => !existingExpenseIds.has(e[EXPENSE_ID]))
+      ];
+      finalDebts = [
+        ...debts,
+        ...newDebts.filter(d => !existingDebtIds.has(d[DEBT_ID]))
+      ];
+      finalDebtReturns = [
+        ...debtReturns,
+        ...newDebtReturns.filter(r => !existingReturnIds.has(r[RETURN_ID]))
+      ];
+      finalCategories = [
+        ...categories,
+        ...newCategories.filter(c => !existingCategoryIds.has(c[CATEGORY_ID]))
+      ];
+    } else {
+      // Replace mode: replace all data
+      finalExpenses = newExpenses;
+      finalDebts = newDebts;
+      finalDebtReturns = newDebtReturns;
+      finalCategories = newCategories;
+    }
 
     // Update local state immediately
-    setExpenses(expenses);
-    setDebts(debts);
-    setDebtReturns(debtReturns);
-    setCategories(categories);
+    setExpenses(finalExpenses);
+    setDebts(finalDebts);
+    setDebtReturns(finalDebtReturns);
+    setCategories(finalCategories);
     setCurrentExcelFileName(data.fileName || null);
 
     // Sync ID counters
-    syncCountersWithData(expenses, debts, debtReturns);
+    syncCountersWithData(finalExpenses, finalDebts, finalDebtReturns);
 
     // Save to Supabase if user is authenticated
     if (user) {
       try {
         setLoading(true);
-        await supabaseService.importData({ expenses, debts, debtReturns, categories });
+        
+        if (mode === 'replace') {
+          // Delete existing data first, then import new data
+          await supabaseService.deleteAllData();
+        }
+        
+        await supabaseService.importData({ 
+          expenses: finalExpenses, 
+          debts: finalDebts, 
+          debtReturns: finalDebtReturns, 
+          categories: finalCategories 
+        });
       } catch (error) {
         console.error('Error saving to Supabase:', error);
         setErrors([`Failed to save data: ${error.message}`]);
@@ -175,7 +221,7 @@ export function FinanceProvider({ children }) {
         setLoading(false);
       }
     }
-  }, [user]);
+  }, [user, expenses, debts, debtReturns, categories]);
 
   /**
    * Clear all data and reset to empty state.

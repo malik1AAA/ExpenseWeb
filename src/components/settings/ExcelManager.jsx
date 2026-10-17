@@ -31,11 +31,21 @@ export default function ExcelManager() {
     errors,
     warnings,
     validationFormatted,
+    hasExistingData,
+    importMode,
     handleFileSelect,
     handleImport,
     handleExport,
+    setMode,
     reset,
-  } = useExcelImport();
+  } = useExcelImport({
+    existingData: {
+      expenses,
+      debts,
+      debtReturns,
+      categories,
+    },
+  });
 
   // Update local validation errors state when validationFormatted changes
   useEffect(() => {
@@ -85,11 +95,11 @@ export default function ExcelManager() {
   };
 
   /**
-   * Confirm import - replace all existing data
+   * Confirm import - replace or merge data based on selected mode
    */
   const confirmImport = async () => {
     setShowConfirmDialog(false);
-    await handleImport(importFinanceData);
+    await handleImport((data) => importFinanceData(data, importMode));
   };
 
   /**
@@ -220,6 +230,61 @@ export default function ExcelManager() {
               )}
             </div>
           </div>
+
+          {/* Existing Data Warning */}
+          {selectedFile && hasExistingData && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-amber-900 mb-2">
+                    Existing Data Detected
+                  </h4>
+                  <p className="text-sm text-amber-800 mb-3">
+                    You already have data in your account. Choose how to handle the import:
+                  </p>
+                  <div className="space-y-2">
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="importMode"
+                        value="replace"
+                        checked={importMode === 'replace'}
+                        onChange={(e) => setMode(e.target.value)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-surface-900">
+                          Replace all data
+                        </p>
+                        <p className="text-xs text-surface-600">
+                          Delete existing data and import new data
+                        </p>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="importMode"
+                        value="merge"
+                        checked={importMode === 'merge'}
+                        onChange={(e) => setMode(e.target.value)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-surface-900">
+                          Merge with existing data
+                        </p>
+                        <p className="text-xs text-surface-600">
+                          Add new data and skip duplicates
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Step 2: Validate */}
           {selectedFile && (
@@ -477,20 +542,31 @@ export default function ExcelManager() {
                 </div>
               )}
 
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-red-900 mb-1">
-                      Warning: Data Replacement
-                    </p>
-                    <p className="text-sm text-red-800">
-                      This will <strong>replace all current data</strong> in the application. 
-                      This action cannot be undone.
-                    </p>
+              {hasExistingData && (
+                <div className={`p-4 border rounded-lg ${importMode === 'replace' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${importMode === 'replace' ? 'text-red-600' : 'text-blue-600'}`} />
+                    <div>
+                      <p className={`text-sm font-semibold mb-1 ${importMode === 'replace' ? 'text-red-900' : 'text-blue-900'}`}>
+                        {importMode === 'replace' ? 'Warning: Data Replacement' : 'Info: Data Merge'}
+                      </p>
+                      <p className={`text-sm ${importMode === 'replace' ? 'text-red-800' : 'text-blue-800'}`}>
+                        {importMode === 'replace' ? (
+                          <>
+                            This will <strong>replace all current data</strong> in the application. 
+                            This action cannot be undone.
+                          </>
+                        ) : (
+                          <>
+                            This will <strong>merge new data</strong> with your existing data. 
+                            Duplicate records will be skipped.
+                          </>
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Footer */}
@@ -519,15 +595,23 @@ export default function ExcelManager() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex items-start gap-3 mb-4">
-              <div className="p-2 rounded-lg bg-red-100">
-                <AlertCircle className="w-6 h-6 text-red-600" />
+              <div className={`p-2 rounded-lg ${importMode === 'replace' ? 'bg-red-100' : 'bg-blue-100'}`}>
+                <AlertCircle className={`w-6 h-6 ${importMode === 'replace' ? 'text-red-600' : 'text-blue-600'}`} />
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-surface-900 mb-2">
-                  Confirm Data Replacement
+                  {importMode === 'replace' ? 'Confirm Data Replacement' : 'Confirm Data Merge'}
                 </h3>
                 <p className="text-sm text-surface-600 mb-3">
-                  You are about to <strong className="text-red-600">replace all existing data</strong> in the application with data from:
+                  {importMode === 'replace' ? (
+                    <>
+                      You are about to <strong className="text-red-600">replace all existing data</strong> in the application with data from:
+                    </>
+                  ) : (
+                    <>
+                      You are about to <strong className="text-blue-600">merge new data</strong> with your existing data from:
+                    </>
+                  )}
                 </p>
                 <div className="p-3 bg-surface-50 rounded-lg mb-3">
                   <p className="text-sm font-medium text-surface-900">
@@ -537,13 +621,26 @@ export default function ExcelManager() {
                     {selectedFile && formatFileSize(selectedFile.size)}
                   </p>
                 </div>
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-800">
-                    <strong>⚠️ This action cannot be undone.</strong>
-                  </p>
-                  <p className="text-xs text-red-700 mt-1">
-                    Make sure you have a backup before proceeding.
-                  </p>
+                <div className={`p-3 border rounded-lg ${importMode === 'replace' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
+                  {importMode === 'replace' ? (
+                    <>
+                      <p className="text-sm text-red-800">
+                        <strong>⚠️ This action cannot be undone.</strong>
+                      </p>
+                      <p className="text-xs text-red-700 mt-1">
+                        All existing data will be deleted and replaced with the imported data.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-blue-800">
+                        <strong>ℹ️ Existing data will be preserved.</strong>
+                      </p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        New records will be added. Duplicate IDs will be skipped.
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -556,9 +653,13 @@ export default function ExcelManager() {
               </button>
               <button
                 onClick={confirmImport}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                className={`flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
+                  importMode === 'replace' 
+                    ? 'bg-red-600 hover:bg-red-700' 
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
-                Yes, Replace Data
+                {importMode === 'replace' ? 'Yes, Replace Data' : 'Yes, Merge Data'}
               </button>
             </div>
           </div>
