@@ -173,6 +173,7 @@ export function useFinance() {
     // Actions (from context)
     importFinanceData: context.importFinanceData,
     clearAllData: context.clearAllData,
+    refreshData: context.refreshData,
 
     addExpense: context.addExpense,
     updateExpense: context.updateExpense,

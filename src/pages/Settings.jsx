@@ -9,7 +9,7 @@ import {
   Download,
   Upload,
 } from "lucide-react";
-import { ExcelManager, CategoryManager, DataIntegrityChecker } from '../components/settings';
+import { ExcelManager, CategoryManager, DataIntegrityChecker, MigrationManager } from '../components/settings';
 
 function Settings() {
   return (
@@ -34,6 +34,9 @@ function Settings() {
 
           {/* Data Integrity Checker */}
           <DataIntegrityChecker />
+
+          {/* Migration Manager */}
+          <MigrationManager />
 
           {/* Appearance */}
           <div className="bg-white rounded-xl border border-surface-200 p-6">

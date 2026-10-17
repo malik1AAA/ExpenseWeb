@@ -12,7 +12,7 @@ import { COLUMNS } from '../config/excelSchema';
  *   - Export to Excel
  *   - Loading states and error/warning messages
  */
-export function useExcelImport({ onImportSuccess } = {}) {
+export function useExcelImport({ onImportSuccess, existingData } = {}) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -20,6 +20,8 @@ export function useExcelImport({ onImportSuccess } = {}) {
   const [errors, setErrors] = useState([]);
   const [warnings, setWarnings] = useState([]);
   const [validationFormatted, setValidationFormatted] = useState(null);
+  const [hasExistingData, setHasExistingData] = useState(false);
+  const [importMode, setImportMode] = useState('replace'); // 'replace' or 'merge'
 
   /**
    * Handle file selection from input
@@ -31,7 +33,17 @@ export function useExcelImport({ onImportSuccess } = {}) {
     setImportResult(null);
     setErrors([]);
     setWarnings([]);
-  }, []);
+    
+    // Check if user has existing data
+    if (existingData) {
+      const hasData = 
+        (existingData.expenses && existingData.expenses.length > 0) ||
+        (existingData.debts && existingData.debts.length > 0) ||
+        (existingData.debtReturns && existingData.debtReturns.length > 0) ||
+        (existingData.categories && existingData.categories.length > 0);
+      setHasExistingData(hasData);
+    }
+  }, [existingData]);
 
   /**
    * Detect duplicate IDs within an array of records
@@ -65,6 +77,40 @@ export function useExcelImport({ onImportSuccess } = {}) {
     });
 
     return { duplicates, uniqueRecords };
+  };
+
+  /**
+   * Validate foreign key relationships
+   * @param {Array} debtReturns - Array of debt return objects
+   * @param {Array} debts - Array of debt objects
+   * @returns {{ valid: boolean, errors: Array }}
+   */
+  const validateForeignKeys = (debtReturns, debts) => {
+    if (!debtReturns || debtReturns.length === 0) {
+      return { valid: true, errors: [] };
+    }
+
+    const debtIds = new Set(
+      (debts || []).map(debt => debt[COLUMNS.DEBTS.DEBT_ID])
+    );
+
+    const errors = [];
+    debtReturns.forEach((returnEntry, index) => {
+      const debtId = returnEntry[COLUMNS.DEBT_RETURNS.DEBT_ID];
+      if (debtId && !debtIds.has(debtId)) {
+        errors.push({
+          sheet: 'DebtReturns',
+          row: index + 1,
+          field: 'DebtID',
+          message: `DebtID "${debtId}" does not exist in debts`,
+        });
+      }
+    });
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    };
   };
 
   /**
@@ -172,6 +218,21 @@ export function useExcelImport({ onImportSuccess } = {}) {
         }
 
         setWarnings(allWarnings);
+
+        // Validate foreign key relationships
+        const fkValidation = validateForeignKeys(
+          returnDuplicates.uniqueRecords,
+          debtDuplicates.uniqueRecords
+        );
+
+        if (!fkValidation.valid) {
+          const fkErrors = fkValidation.errors.map(
+            (err) => `[${err.sheet}] Row ${err.row}: ${err.field} - ${err.message}`
+          );
+          setErrors(fkErrors);
+          setIsImporting(false);
+          return null;
+        }
 
         // Check if workbook is effectively empty
         const totalRecords =
@@ -294,6 +355,16 @@ export function useExcelImport({ onImportSuccess } = {}) {
     setValidationFormatted(null);
   }, []);
 
+  /**
+   * Set import mode (replace or merge)
+   * @param {string} mode - 'replace' or 'merge'
+   */
+  const setMode = useCallback((mode) => {
+    if (mode === 'replace' || mode === 'merge') {
+      setImportMode(mode);
+    }
+  }, []);
+
   return {
     selectedFile,
     isImporting,
@@ -302,9 +373,12 @@ export function useExcelImport({ onImportSuccess } = {}) {
     errors,
     warnings,
     validationFormatted,
+    hasExistingData,
+    importMode,
     handleFileSelect,
     handleImport,
     handleExport,
+    setMode,
     reset,
   };
 }
