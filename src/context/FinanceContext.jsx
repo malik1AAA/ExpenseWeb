@@ -249,6 +249,42 @@ export function FinanceProvider({ children }) {
     }
   }, [user]);
 
+  /**
+   * Refresh data from Supabase
+   * Reloads all data from the database
+   */
+  const refreshData = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      setErrors([]);
+
+      // Fetch all data from Supabase
+      const [expensesData, debtsData, debtReturnsData, categoriesData] = await Promise.all([
+        supabaseService.fetchExpenses(),
+        supabaseService.fetchDebts(),
+        supabaseService.fetchDebtReturns(),
+        supabaseService.fetchCategories(),
+      ]);
+
+      setExpenses(expensesData);
+      setDebts(debtsData);
+      setDebtReturns(debtReturnsData);
+      setCategories(categoriesData);
+
+      // Sync ID counters with loaded data
+      syncCountersWithData(expensesData, debtsData, debtReturnsData);
+
+      setDataLoaded(true);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      setErrors([`Failed to refresh data: ${error.message}`]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
   // ---------------------------------------------------------------------------
   // Expenses CRUD
   // ---------------------------------------------------------------------------
@@ -519,9 +555,10 @@ export function FinanceProvider({ children }) {
     errors,
     dataLoaded,
 
-    // Import / Clear
+    // Import / Clear / Refresh
     importFinanceData,
     clearAllData,
+    refreshData,
 
     // Expenses
     addExpense,
