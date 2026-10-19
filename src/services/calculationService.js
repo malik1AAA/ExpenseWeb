@@ -125,6 +125,19 @@ export const getAnnualTotal = (expenses, year) => {
 };
 
 /**
+ * Get expenses for a specific year
+ * @param {Array} expenses - Array of expense objects
+ * @param {number} year - Year
+ * @returns {Array} Filtered expenses for the year
+ */
+export const getExpensesForYear = (expenses, year) => {
+  if (!Array.isArray(expenses) || expenses.length === 0) return [];
+  if (year === undefined) return [];
+  
+  return expenses.filter((expense) => matchesYear(expense, year));
+};
+
+/**
  * Get totals grouped by category for a specific month
  * @param {Array} expenses - Array of expense objects
  * @param {number} year - Year

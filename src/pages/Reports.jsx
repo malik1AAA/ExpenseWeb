@@ -13,6 +13,7 @@ import {
   getLowestSpendingMonth,
   getHighestSpendingCategoryForYear,
   getAnnualCategoryTotals,
+  getExpensesForYear,
 } from '../services/calculationService';
 import { COLUMNS } from '../config/excelSchema';
 import {
@@ -54,6 +55,8 @@ export default function Reports() {
 
   // Annual Report Data
   const annualTotal = getAnnualTotal(expenses, selectedYear);
+  const annualExpenses = getExpensesForYear(expenses, selectedYear);
+  const annualCount = getExpenseCount(annualExpenses);
   const annualAverage = getAverageMonthlySpending(expenses, selectedYear);
   const highestMonth = getHighestSpendingMonth(expenses, selectedYear);
   const lowestMonth = getLowestSpendingMonth(expenses, selectedYear);
@@ -162,7 +165,9 @@ export default function Reports() {
 
           {/* Annual Summary Stats */}
           <AnnualReportSummary
+            year={selectedYear}
             annualTotal={annualTotal}
+            annualCount={annualCount}
             averageMonthly={annualAverage}
             highestMonth={highestMonth}
             lowestMonth={lowestMonth}

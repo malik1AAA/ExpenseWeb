@@ -185,22 +185,66 @@ export const updateDebt = async (debtId, updates) => {
   if (!user) throw new Error('User not authenticated');
 
   const updateData = {};
-  if (updates[COLUMNS.DEBTS.PERSON]) updateData.person = updates[COLUMNS.DEBTS.PERSON];
-  if (updates[COLUMNS.DEBTS.DEBT_CATEGORY]) updateData.debt_category = updates[COLUMNS.DEBTS.DEBT_CATEGORY];
-  if (updates[COLUMNS.DEBTS.DIRECTION]) updateData.direction = updates[COLUMNS.DEBTS.DIRECTION];
-  if (updates[COLUMNS.DEBTS.ORIGINAL_AMOUNT] !== undefined) updateData.original_amount = updates[COLUMNS.DEBTS.ORIGINAL_AMOUNT];
-  if (updates[COLUMNS.DEBTS.DATE]) updateData.date = updates[COLUMNS.DEBTS.DATE];
-  if (updates[COLUMNS.DEBTS.DUE_DATE] !== undefined) updateData.due_date = updates[COLUMNS.DEBTS.DUE_DATE];
-  if (updates[COLUMNS.DEBTS.NOTES] !== undefined) updateData.notes = updates[COLUMNS.DEBTS.NOTES];
+  
+  // Use consistent null/undefined checks for all fields
+  if (updates[COLUMNS.DEBTS.PERSON] !== undefined && updates[COLUMNS.DEBTS.PERSON] !== null) {
+    updateData.person = updates[COLUMNS.DEBTS.PERSON];
+  }
+  if (updates[COLUMNS.DEBTS.DEBT_CATEGORY] !== undefined && updates[COLUMNS.DEBTS.DEBT_CATEGORY] !== null) {
+    updateData.debt_category = updates[COLUMNS.DEBTS.DEBT_CATEGORY];
+  }
+  if (updates[COLUMNS.DEBTS.DIRECTION] !== undefined && updates[COLUMNS.DEBTS.DIRECTION] !== null) {
+    updateData.direction = updates[COLUMNS.DEBTS.DIRECTION];
+  }
+  if (updates[COLUMNS.DEBTS.ORIGINAL_AMOUNT] !== undefined && updates[COLUMNS.DEBTS.ORIGINAL_AMOUNT] !== null) {
+    updateData.original_amount = updates[COLUMNS.DEBTS.ORIGINAL_AMOUNT];
+  }
+  if (updates[COLUMNS.DEBTS.DATE] !== undefined && updates[COLUMNS.DEBTS.DATE] !== null) {
+    updateData.date = updates[COLUMNS.DEBTS.DATE];
+  }
+  if (updates[COLUMNS.DEBTS.DUE_DATE] !== undefined) {
+    updateData.due_date = updates[COLUMNS.DEBTS.DUE_DATE];
+  }
+  if (updates[COLUMNS.DEBTS.NOTES] !== undefined) {
+    updateData.notes = updates[COLUMNS.DEBTS.NOTES];
+  }
 
-  const { error } = await supabase
+  // Validate that we have data to update
+  if (Object.keys(updateData).length === 0) {
+    console.warn('No valid fields to update for debt:', debtId);
+    return { ...updates, [COLUMNS.DEBTS.DEBT_ID]: debtId };
+  }
+
+  // Perform the update and check how many rows were affected
+  const { data, error, count } = await supabase
     .from('debts')
     .update(updateData)
     .eq('user_id', user.id)
-    .eq('debt_id', debtId);
+    .eq('debt_id', debtId)
+    .select()
+    .single();
 
-  if (error) throw error;
-  return { ...updates, [COLUMNS.DEBTS.DEBT_ID]: debtId };
+  if (error) {
+    console.error('Supabase update error:', error);
+    throw new Error(`Failed to update debt: ${error.message}`);
+  }
+
+  // Verify that a row was actually updated
+  if (!data) {
+    throw new Error('Debt not found or update failed - no rows affected');
+  }
+
+  // Return the updated data from the database
+  return {
+    [COLUMNS.DEBTS.DEBT_ID]: data.debt_id,
+    [COLUMNS.DEBTS.PERSON]: data.person,
+    [COLUMNS.DEBTS.DEBT_CATEGORY]: data.debt_category,
+    [COLUMNS.DEBTS.DIRECTION]: data.direction,
+    [COLUMNS.DEBTS.ORIGINAL_AMOUNT]: parseFloat(data.original_amount),
+    [COLUMNS.DEBTS.DATE]: data.date,
+    [COLUMNS.DEBTS.DUE_DATE]: data.due_date,
+    [COLUMNS.DEBTS.NOTES]: data.notes || '',
+  };
 };
 
 /**
