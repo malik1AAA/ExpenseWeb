@@ -1,18 +1,20 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Edit, Trash2, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Receipt } from 'lucide-react';
+import { Edit, Trash2, ChevronLeft, ChevronRight, Receipt } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { formatDate } from '../../utils/dateUtils';
 import { COLUMNS } from '../../config/excelSchema';
-import { Button } from '../common';
+import { Button, SortableHeader } from '../common';
+import { useSortableTable } from '../../hooks/useSortableTable';
 
 /**
  * ExpenseTable - Table with sorting and pagination
  * Features:
- * - Sort by date or amount
+ * - Sort by date, description, category, amount, payment method
  * - Pagination with configurable items per page
  * - Empty state with icon
  * - Responsive design
  * - Proper currency formatting
+ * - Accessible sorting with aria-sort attributes
  */
 export default function ExpenseTable({ 
   expenses = [], 
@@ -20,8 +22,6 @@ export default function ExpenseTable({
   onEdit, 
   onDelete 
 }) {
-  const [sortField, setSortField] = useState(COLUMNS.EXPENSES.DATE);
-  const [sortDirection, setSortDirection] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -48,31 +48,12 @@ export default function ExpenseTable({
     [categoryMap]
   );
 
-  // Sort expenses (memoized)
-  const sortedExpenses = useMemo(() => {
-    return [...expenses].sort((a, b) => {
-      let aVal = a[sortField];
-      let bVal = b[sortField];
-
-      // Handle numeric fields
-      if (sortField === COLUMNS.EXPENSES.AMOUNT) {
-        aVal = parseFloat(aVal) || 0;
-        bVal = parseFloat(bVal) || 0;
-      }
-
-      // Handle date fields
-      if (sortField === COLUMNS.EXPENSES.DATE) {
-        aVal = new Date(aVal);
-        bVal = new Date(bVal);
-      }
-
-      if (sortDirection === 'asc') {
-        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
-      } else {
-        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
-      }
-    });
-  }, [expenses, sortField, sortDirection]);
+  // Use sortable table hook with default sort by date descending
+  const { handleSort, getSortState, sortedData: sortedExpenses } = useSortableTable(
+    expenses,
+    COLUMNS.EXPENSES.DATE,
+    'desc'
+  );
 
   // Pagination (memoized)
   const totalPages = useMemo(
@@ -86,28 +67,11 @@ export default function ExpenseTable({
     return sortedExpenses.slice(startIndex, startIndex + itemsPerPage);
   }, [sortedExpenses, startIndex, itemsPerPage]);
 
-  const handleSort = useCallback(
-    (field) => {
-      if (sortField === field) {
-        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-      } else {
-        setSortField(field);
-        setSortDirection('desc');
-      }
-      setCurrentPage(1);
-    },
-    [sortField, sortDirection]
-  );
-
-  const getSortIcon = (field) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="w-3 h-3 inline ml-1 opacity-40" />;
-    }
-    if (sortDirection === 'asc') {
-      return <ArrowUp className="w-3 h-3 inline ml-1 text-primary-600" />;
-    }
-    return <ArrowDown className="w-3 h-3 inline ml-1 text-primary-600" />;
-  };
+  // Wrap handleSort to reset pagination
+  const handleSortWithReset = useCallback((field) => {
+    handleSort(field);
+    setCurrentPage(1);
+  }, [handleSort]);
 
   // Empty state
   if (expenses.length === 0) {
@@ -135,33 +99,41 @@ export default function ExpenseTable({
         <table className="w-full">
           <thead className="bg-surface-50 border-b border-surface-200">
             <tr>
-              <th 
-                className="px-4 py-3 text-left text-xs font-semibold text-surface-600 uppercase tracking-wider cursor-pointer hover:bg-surface-100 transition-colors select-none"
-                onClick={() => handleSort(COLUMNS.EXPENSES.DATE)}
-              >
-                <span className="inline-flex items-center">
-                  Date
-                  {getSortIcon(COLUMNS.EXPENSES.DATE)}
-                </span>
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Description
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Category
-              </th>
-              <th 
-                className="px-4 py-3 text-right text-xs font-semibold text-surface-600 uppercase tracking-wider cursor-pointer hover:bg-surface-100 transition-colors select-none"
-                onClick={() => handleSort(COLUMNS.EXPENSES.AMOUNT)}
-              >
-                <span className="inline-flex items-center justify-end">
-                  Amount
-                  {getSortIcon(COLUMNS.EXPENSES.AMOUNT)}
-                </span>
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Payment Method
-              </th>
+              <SortableHeader
+                label="Date"
+                field={COLUMNS.EXPENSES.DATE}
+                sortState={getSortState(COLUMNS.EXPENSES.DATE)}
+                onSort={handleSortWithReset}
+                align="left"
+              />
+              <SortableHeader
+                label="Description"
+                field={COLUMNS.EXPENSES.DESCRIPTION}
+                sortState={getSortState(COLUMNS.EXPENSES.DESCRIPTION)}
+                onSort={handleSortWithReset}
+                align="left"
+              />
+              <SortableHeader
+                label="Category"
+                field={COLUMNS.EXPENSES.CATEGORY}
+                sortState={getSortState(COLUMNS.EXPENSES.CATEGORY)}
+                onSort={handleSortWithReset}
+                align="left"
+              />
+              <SortableHeader
+                label="Amount"
+                field={COLUMNS.EXPENSES.AMOUNT}
+                sortState={getSortState(COLUMNS.EXPENSES.AMOUNT)}
+                onSort={handleSortWithReset}
+                align="right"
+              />
+              <SortableHeader
+                label="Payment Method"
+                field={COLUMNS.EXPENSES.PAYMENT_METHOD}
+                sortState={getSortState(COLUMNS.EXPENSES.PAYMENT_METHOD)}
+                onSort={handleSortWithReset}
+                align="left"
+              />
               <th className="px-4 py-3 text-left text-xs font-semibold text-surface-600 uppercase tracking-wider">
                 Notes
               </th>

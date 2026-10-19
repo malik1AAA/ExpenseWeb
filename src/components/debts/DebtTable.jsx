@@ -3,9 +3,11 @@ import { formatCurrency } from '../../utils/currencyUtils';
 import { formatDate } from '../../utils/dateUtils';
 import { COLUMNS, DEBT_DIRECTION } from '../../config/excelSchema';
 import { Edit, Trash2, DollarSign } from 'lucide-react';
+import { SortableHeader } from '../common';
+import { useSortableTable } from '../../hooks/useSortableTable';
 
 /**
- * DebtTable - Table displaying debts with calculated fields
+ * DebtTable - Table displaying debts with calculated fields and interactive sorting
  */
 export default function DebtTable({ 
   debts = [], 
@@ -59,14 +61,26 @@ export default function DebtTable({
     return 'Active';
   }, []);
 
-  // Sort by due date (earliest first) - memoized
-  const sortedDebts = useMemo(() => {
-    return [...debts].sort((a, b) => {
-      const dateA = new Date(a[COLUMNS.DEBTS.DUE_DATE]);
-      const dateB = new Date(b[COLUMNS.DEBTS.DUE_DATE]);
-      return dateA - dateB;
+  // Enrich debts with calculated fields for sorting
+  const enrichedDebts = useMemo(() => {
+    return debts.map(debt => {
+      const { totalReturned, remaining } = calculateRemaining(debt);
+      const status = getStatus(debt, totalReturned, remaining);
+      return {
+        ...debt,
+        _totalReturned: totalReturned,
+        _remaining: remaining,
+        _status: status,
+      };
     });
-  }, [debts]);
+  }, [debts, calculateRemaining, getStatus]);
+
+  // Use sortable table hook with default sort by due date ascending
+  const { handleSort, getSortState, sortedData: sortedDebts } = useSortableTable(
+    enrichedDebts,
+    COLUMNS.DEBTS.DUE_DATE,
+    'asc'
+  );
 
   const getStatusColor = useCallback((status) => {
     switch (status) {
@@ -101,30 +115,62 @@ export default function DebtTable({
         <table className="w-full">
           <thead className="bg-surface-50 border-b border-surface-200">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Person
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Original Amount
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Due Date
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Returned/Paid
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Remaining
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Status
-              </th>
+              <SortableHeader
+                label="Person"
+                field={COLUMNS.DEBTS.PERSON}
+                sortState={getSortState(COLUMNS.DEBTS.PERSON)}
+                onSort={handleSort}
+                align="left"
+              />
+              <SortableHeader
+                label="Original Amount"
+                field={COLUMNS.DEBTS.ORIGINAL_AMOUNT}
+                sortState={getSortState(COLUMNS.DEBTS.ORIGINAL_AMOUNT)}
+                onSort={handleSort}
+                align="right"
+              />
+              <SortableHeader
+                label="Date"
+                field={COLUMNS.DEBTS.DATE}
+                sortState={getSortState(COLUMNS.DEBTS.DATE)}
+                onSort={handleSort}
+                align="left"
+              />
+              <SortableHeader
+                label="Due Date"
+                field={COLUMNS.DEBTS.DUE_DATE}
+                sortState={getSortState(COLUMNS.DEBTS.DUE_DATE)}
+                onSort={handleSort}
+                align="left"
+              />
+              <SortableHeader
+                label="Category"
+                field={COLUMNS.DEBTS.DEBT_CATEGORY}
+                sortState={getSortState(COLUMNS.DEBTS.DEBT_CATEGORY)}
+                onSort={handleSort}
+                align="left"
+              />
+              <SortableHeader
+                label="Returned/Paid"
+                field="_totalReturned"
+                sortState={getSortState('_totalReturned')}
+                onSort={handleSort}
+                align="right"
+              />
+              <SortableHeader
+                label="Remaining"
+                field="_remaining"
+                sortState={getSortState('_remaining')}
+                onSort={handleSort}
+                align="right"
+              />
+              <SortableHeader
+                label="Status"
+                field="_status"
+                sortState={getSortState('_status')}
+                onSort={handleSort}
+                align="center"
+              />
               <th className="px-4 py-3 text-right text-xs font-semibold text-surface-600 uppercase tracking-wider">
                 Actions
               </th>
@@ -132,8 +178,9 @@ export default function DebtTable({
           </thead>
           <tbody className="divide-y divide-surface-100">
             {sortedDebts.map((debt) => {
-              const { totalReturned, remaining } = calculateRemaining(debt);
-              const status = getStatus(debt, totalReturned, remaining);
+              const totalReturned = debt._totalReturned;
+              const remaining = debt._remaining;
+              const status = debt._status;
               const isLent = debt[COLUMNS.DEBTS.DIRECTION] === DEBT_DIRECTION.LENT;
 
               return (
@@ -181,7 +228,10 @@ export default function DebtTable({
                     <div className="flex items-center justify-end gap-1">
                       {remaining > 0 && onRecordReturn && (
                         <button
-                          onClick={() => onRecordReturn(debt)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRecordReturn(debt);
+                          }}
                           className="p-1.5 rounded-lg hover:bg-green-50 transition-colors"
                           title="Record Return"
                         >
@@ -189,14 +239,20 @@ export default function DebtTable({
                         </button>
                       )}
                       <button
-                        onClick={() => onEdit(debt)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(debt);
+                        }}
                         className="p-1.5 rounded-lg hover:bg-surface-100 transition-colors"
                         title="Edit"
                       >
                         <Edit className="w-4 h-4 text-surface-600" />
                       </button>
                       <button
-                        onClick={() => onDelete(debt)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(debt);
+                        }}
                         className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
                         title="Delete"
                       >

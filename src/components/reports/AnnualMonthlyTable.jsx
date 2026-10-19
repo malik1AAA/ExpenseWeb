@@ -1,11 +1,21 @@
 import { formatCurrency } from '../../utils/currencyUtils';
 import { getMonthlySummaryForYear, getMonthName } from '../../services/calculationService';
+import { SortableHeader } from '../common';
+import { useSortableTable } from '../../hooks/useSortableTable';
 
 /**
  * AnnualMonthlyTable - Monthly summary table for annual report
+ * Features interactive sorting by month, total expenses, transaction count, and average
  */
 export default function AnnualMonthlyTable({ expenses = [], year }) {
   const monthlySummary = getMonthlySummaryForYear(expenses, year);
+
+  // Use sortable table hook with default sort by month ascending
+  const { handleSort, getSortState, sortedData } = useSortableTable(
+    monthlySummary,
+    'month',
+    'asc'
+  );
 
   return (
     <div className="bg-white rounded-xl border border-surface-200 p-6">
@@ -16,22 +26,38 @@ export default function AnnualMonthlyTable({ expenses = [], year }) {
         <table className="w-full">
           <thead className="bg-surface-50 border-b border-surface-200">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Month
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Total Expenses
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Number of Transactions
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Average Expense
-              </th>
+              <SortableHeader
+                label="Month"
+                field="month"
+                sortState={getSortState('month')}
+                onSort={handleSort}
+                align="left"
+              />
+              <SortableHeader
+                label="Total Expenses"
+                field="total"
+                sortState={getSortState('total')}
+                onSort={handleSort}
+                align="right"
+              />
+              <SortableHeader
+                label="Number of Transactions"
+                field="count"
+                sortState={getSortState('count')}
+                onSort={handleSort}
+                align="right"
+              />
+              <SortableHeader
+                label="Average Expense"
+                field="average"
+                sortState={getSortState('average')}
+                onSort={handleSort}
+                align="right"
+              />
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-100">
-            {monthlySummary.map((item) => (
+            {sortedData.map((item) => (
               <tr key={item.month} className="hover:bg-surface-50 transition-colors">
                 <td className="px-4 py-3 text-sm text-surface-900 font-medium">
                   {getMonthName(item.month)}

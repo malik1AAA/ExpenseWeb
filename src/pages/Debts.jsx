@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, DollarSign } from 'lucide-react';
 import { useFinance } from '../hooks/useFinance';
 import { PageHeader, Button, DeleteConfirmation } from '../components/common';
-import { DebtSummary, DebtTable, DebtForm, DebtReturnForm, DebtReturnsList, DebtDetails, DebtFilters } from '../components/debts';
+import { DebtSummary, DebtTable, DebtForm, DebtReturnForm, DebtReturnsList, DebtDetails, DebtFilters, BulkRepaymentModal } from '../components/debts';
 import { COLUMNS, DEBT_DIRECTION } from '../config/excelSchema';
 import { Modal } from '../components/common';
 import { filterDebts } from '../services/debtFilterService';
@@ -16,6 +16,7 @@ export default function Debts() {
     deleteDebt,
     addDebtReturn,
     deleteDebtReturn,
+    refreshData,
   } = useFinance();
 
   // Filter state
@@ -38,6 +39,7 @@ export default function Debts() {
   const [debtForReturnsList, setDebtForReturnsList] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [debtForDetails, setDebtForDetails] = useState(null);
+  const [isBulkRepaymentOpen, setIsBulkRepaymentOpen] = useState(false);
 
   // Create a map of debt returns by debt ID for O(1) lookups
   const debtReturnsByDebtId = useMemo(() => {
@@ -152,6 +154,13 @@ export default function Debts() {
     setIsDetailsOpen(true);
   }, []);
 
+  // Handle bulk repayment success - refresh data
+  const handleBulkRepaymentSuccess = useCallback(async () => {
+    if (refreshData) {
+      await refreshData();
+    }
+  }, [refreshData]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -159,6 +168,13 @@ export default function Debts() {
         title="Debts"
         description="Track money lent and borrowed"
       >
+        <Button
+          variant="secondary"
+          icon={DollarSign}
+          onClick={() => setIsBulkRepaymentOpen(true)}
+        >
+          Record Bulk Repayment
+        </Button>
         <Button variant="primary" icon={Plus} onClick={handleAddDebt}>
           Add Debt
         </Button>
@@ -227,6 +243,15 @@ export default function Debts() {
         isOpen={isDetailsOpen}
         onClose={() => setIsDetailsOpen(false)}
         debt={debtForDetails}
+        debtReturns={debtReturns}
+      />
+
+      {/* Bulk Repayment Modal */}
+      <BulkRepaymentModal
+        isOpen={isBulkRepaymentOpen}
+        onClose={() => setIsBulkRepaymentOpen(false)}
+        onSuccess={handleBulkRepaymentSuccess}
+        debts={debts}
         debtReturns={debtReturns}
       />
     </div>

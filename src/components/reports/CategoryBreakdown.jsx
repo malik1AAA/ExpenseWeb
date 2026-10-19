@@ -1,9 +1,25 @@
 import { formatCurrency } from '../../utils/currencyUtils';
+import { SortableHeader } from '../common';
+import { useSortableTable } from '../../hooks/useSortableTable';
 
 /**
  * CategoryBreakdown - Table showing category breakdown with amounts and percentages
+ * Features interactive sorting by category, amount, and percentage
  */
 export default function CategoryBreakdown({ categoryData = [], total = 0, getCategoryName }) {
+  // Enrich data with percentage for sorting
+  const enrichedData = categoryData.map(item => ({
+    ...item,
+    percentage: total > 0 ? (item.total / total) * 100 : 0,
+  }));
+
+  // Use sortable table hook with default sort by amount descending
+  const { handleSort, getSortState, sortedData } = useSortableTable(
+    enrichedData,
+    'total',
+    'desc'
+  );
+
   if (categoryData.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-surface-200 p-6">
@@ -19,9 +35,6 @@ export default function CategoryBreakdown({ categoryData = [], total = 0, getCat
     );
   }
 
-  // Sort by amount descending
-  const sortedData = [...categoryData].sort((a, b) => b.total - a.total);
-
   return (
     <div className="bg-white rounded-xl border border-surface-200 p-6">
       <h3 className="text-lg font-semibold text-surface-800 mb-4">
@@ -31,15 +44,27 @@ export default function CategoryBreakdown({ categoryData = [], total = 0, getCat
         <table className="w-full">
           <thead className="bg-surface-50 border-b border-surface-200">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Amount
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-surface-600 uppercase tracking-wider">
-                Percentage
-              </th>
+              <SortableHeader
+                label="Category"
+                field="category"
+                sortState={getSortState('category')}
+                onSort={handleSort}
+                align="left"
+              />
+              <SortableHeader
+                label="Amount"
+                field="total"
+                sortState={getSortState('total')}
+                onSort={handleSort}
+                align="right"
+              />
+              <SortableHeader
+                label="Percentage"
+                field="percentage"
+                sortState={getSortState('percentage')}
+                onSort={handleSort}
+                align="right"
+              />
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-100">

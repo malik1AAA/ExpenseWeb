@@ -10,4 +10,5 @@ export { default as Select } from './Select';
 export { default as Textarea } from './Textarea';
 export { default as Badge } from './Badge';
 export { default as DeleteConfirmation } from './DeleteConfirmation';
+export { default as SortableHeader } from './SortableHeader';
 export { default as ThemeToggle } from './ThemeToggle';
