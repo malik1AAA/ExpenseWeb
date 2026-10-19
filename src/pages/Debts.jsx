@@ -181,7 +181,7 @@ export default function Debts() {
       </PageHeader>
 
       {/* Summary */}
-      <DebtSummary debts={debts} debtReturns={debtReturns} />
+      <DebtSummary debts={filteredDebts} debtReturns={debtReturns} />
 
       {/* Filters */}
       <DebtFilters filters={filters} onFilterChange={handleFilterChange} />
