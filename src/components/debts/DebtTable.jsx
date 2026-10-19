@@ -181,7 +181,10 @@ export default function DebtTable({
                     <div className="flex items-center justify-end gap-1">
                       {remaining > 0 && onRecordReturn && (
                         <button
-                          onClick={() => onRecordReturn(debt)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRecordReturn(debt);
+                          }}
                           className="p-1.5 rounded-lg hover:bg-green-50 transition-colors"
                           title="Record Return"
                         >
@@ -189,14 +192,20 @@ export default function DebtTable({
                         </button>
                       )}
                       <button
-                        onClick={() => onEdit(debt)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(debt);
+                        }}
                         className="p-1.5 rounded-lg hover:bg-surface-100 transition-colors"
                         title="Edit"
                       >
                         <Edit className="w-4 h-4 text-surface-600" />
                       </button>
                       <button
-                        onClick={() => onDelete(debt)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(debt);
+                        }}
                         className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
                         title="Delete"
                       >
