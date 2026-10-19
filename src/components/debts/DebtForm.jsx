@@ -74,18 +74,29 @@ export default function DebtForm({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validate()) return;
+
+    setIsSubmitting(true);
 
     const debtData = {
       ...formData,
       [COLUMNS.DEBTS.ORIGINAL_AMOUNT]: parseFloat(formData[COLUMNS.DEBTS.ORIGINAL_AMOUNT]),
     };
 
-    onSubmit(debtData);
-    onClose();
+    try {
+      await onSubmit(debtData);
+      onClose();
+    } catch (error) {
+      console.error('Form submission error:', error);
+      // Error is already handled in FinanceContext, just keep the modal open
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (field, value) => {
@@ -187,11 +198,23 @@ export default function DebtForm({
         />
 
         <div className="flex gap-3 pt-4">
-          <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
+          <Button 
+            type="button" 
+            variant="secondary" 
+            onClick={onClose} 
+            className="flex-1"
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button type="submit" variant="primary" className="flex-1">
-            {debt ? 'Update' : 'Add'} Debt
+          <Button 
+            type="submit" 
+            variant="primary" 
+            className="flex-1"
+            disabled={isSubmitting}
+            loading={isSubmitting}
+          >
+            {isSubmitting ? 'Saving...' : (debt ? 'Update' : 'Add')} Debt
           </Button>
         </div>
       </form>

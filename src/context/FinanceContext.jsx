@@ -387,19 +387,32 @@ export function FinanceProvider({ children }) {
   const updateDebt = useCallback(async (id, debt) => {
     if (!id || !debt) return;
     
-    // Update local state immediately
-    setDebts((prev) =>
-      prev.map((d) => (d[DEBT_ID] === id ? { ...d, ...debt } : d))
-    );
-    
-    // Save to Supabase if user is authenticated
+    // Save to Supabase first if user is authenticated
     if (user) {
       try {
-        await supabaseService.updateDebt(id, debt);
+        // Wait for Supabase confirmation and get the updated data
+        const updatedDebt = await supabaseService.updateDebt(id, debt);
+        
+        // Only update local state after successful Supabase save
+        setDebts((prev) =>
+          prev.map((d) => (d[DEBT_ID] === id ? { ...d, ...updatedDebt } : d))
+        );
+        
+        // Clear any previous errors
+        setErrors([]);
+        
+        return updatedDebt;
       } catch (error) {
         console.error('Error updating debt:', error);
         setErrors([`Failed to update debt: ${error.message}`]);
+        throw error; // Re-throw to let the caller know the update failed
       }
+    } else {
+      // If not authenticated, just update local state (for offline/demo mode)
+      setDebts((prev) =>
+        prev.map((d) => (d[DEBT_ID] === id ? { ...d, ...debt } : d))
+      );
+      return { ...debt, [DEBT_ID]: id };
     }
   }, [user]);
 
