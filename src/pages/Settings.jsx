@@ -16,7 +16,6 @@ import { ExcelManager, CategoryManager, DataIntegrityChecker, MigrationManager }
 function Settings() {
   const { theme, setTheme } = useTheme();
   const [compactMode, setCompactMode] = useState(false);
-  const excelManagerRef = useRef(null);
 
   const handleThemeChange = (e) => {
     setTheme(e.target.value);
