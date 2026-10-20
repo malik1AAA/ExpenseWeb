@@ -1,160 +1,115 @@
 /**
  * ID Generation Service
  * Generates sequential IDs for expenses, debts, and debt returns
- * Format: EXP_1, EXP_2, DEBT_1, DEBT_2, RET_1, RET_2
+ * Format: EXPENSE_1, EXPENSE_2, DEBT_1, DEBT_2, RETURN_1, RETURN_2
+ * 
+ * IDs are now generated atomically in the database using sequences
+ * to prevent duplicates in concurrent scenarios.
  */
 
-const STORAGE_KEY = 'finance_app_id_counters';
-
-/**
- * Get ID counters from localStorage
- * @returns {Object} Counter object with expense, debt, and return counters
- */
-const getIdCounters = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error('Error reading ID counters from localStorage:', error);
-  }
-  
-  return {
-    expense: 0,
-    debt: 0,
-    return: 0,
-  };
-};
-
-/**
- * Save ID counters to localStorage
- * @param {Object} counters - Counter object
- */
-const saveIdCounters = (counters) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(counters));
-  } catch (error) {
-    console.error('Error saving ID counters to localStorage:', error);
-  }
-};
+import { supabase } from '../lib/supabaseClient';
 
 /**
  * Generate next sequential expense ID
- * @returns {string} Expense ID in format EXP_1, EXP_2, etc.
+ * Calls database function to get next ID atomically
+ * @returns {Promise<string>} Expense ID in format EXPENSE_1, EXPENSE_2, etc.
  */
-export const generateExpenseId = () => {
-  const counters = getIdCounters();
-  counters.expense += 1;
-  saveIdCounters(counters);
-  return `EXP_${counters.expense}`;
+export const generateExpenseId = async () => {
+  try {
+    const { data, error } = await supabase.rpc('generate_next_expense_id');
+    
+    if (error) {
+      console.error('Error generating expense ID:', error);
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Failed to generate expense ID:', error);
+    throw new Error('Failed to generate expense ID');
+  }
 };
 
 /**
  * Generate next sequential debt ID
- * @returns {string} Debt ID in format DEBT_1, DEBT_2, etc.
+ * Calls database function to get next ID atomically
+ * @returns {Promise<string>} Debt ID in format DEBT_1, DEBT_2, etc.
  */
-export const generateDebtId = () => {
-  const counters = getIdCounters();
-  counters.debt += 1;
-  saveIdCounters(counters);
-  return `DEBT_${counters.debt}`;
+export const generateDebtId = async () => {
+  try {
+    const { data, error } = await supabase.rpc('generate_next_debt_id');
+    
+    if (error) {
+      console.error('Error generating debt ID:', error);
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Failed to generate debt ID:', error);
+    throw new Error('Failed to generate debt ID');
+  }
 };
 
 /**
  * Generate next sequential return ID
- * @returns {string} Return ID in format RET_1, RET_2, etc.
+ * Calls database function to get next ID atomically
+ * @returns {Promise<string>} Return ID in format RETURN_1, RETURN_2, etc.
  */
-export const generateReturnId = () => {
-  const counters = getIdCounters();
-  counters.return += 1;
-  saveIdCounters(counters);
-  return `RET_${counters.return}`;
+export const generateReturnId = async () => {
+  try {
+    const { data, error } = await supabase.rpc('generate_next_return_id');
+    
+    if (error) {
+      console.error('Error generating return ID:', error);
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Failed to generate return ID:', error);
+    throw new Error('Failed to generate return ID');
+  }
 };
 
 /**
- * Get current counter values (for debugging)
- * @returns {Object} Current counter values
+ * Get current sequence values from database (for debugging)
+ * @returns {Promise<Object>} Current sequence values
  */
-export const getCurrentCounters = () => {
-  return getIdCounters();
+export const getCurrentCounters = async () => {
+  try {
+    const { data: expenseData, error: expenseError } = await supabase
+      .rpc('currval', { sequence_name: 'public.expense_id_seq_global' })
+      .single();
+    
+    const { data: debtData, error: debtError } = await supabase
+      .rpc('currval', { sequence_name: 'public.debt_id_seq_global' })
+      .single();
+    
+    const { data: returnData, error: returnError } = await supabase
+      .rpc('currval', { sequence_name: 'public.return_id_seq_global' })
+      .single();
+    
+    return {
+      expense: expenseError ? 0 : expenseData,
+      debt: debtError ? 0 : debtData,
+      return: returnError ? 0 : returnData,
+    };
+  } catch (error) {
+    console.error('Error getting current counters:', error);
+    return { expense: 0, debt: 0, return: 0 };
+  }
 };
 
 /**
- * Reset all counters (for testing/debugging)
+ * Sync function - no longer needed with database sequences
+ * Kept for backward compatibility but does nothing
+ * @param {Array} expenses - Array of expense objects (unused)
+ * @param {Array} debts - Array of debt objects (unused)
+ * @param {Array} debtReturns - Array of debt return objects (unused)
+ * @returns {Promise<Object>} Empty counters object
  */
-export const resetCounters = () => {
-  saveIdCounters({
-    expense: 0,
-    debt: 0,
-    return: 0,
-  });
-};
-
-/**
- * Sync counters with existing data
- * Call this on app initialization to ensure counters are ahead of existing IDs
- * @param {Array} expenses - Array of expense objects
- * @param {Array} debts - Array of debt objects
- * @param {Array} debtReturns - Array of debt return objects
- */
-export const syncCountersWithData = (expenses = [], debts = [], debtReturns = []) => {
-  const counters = getIdCounters();
-  
-  // Find highest expense ID number
-  let maxExpenseNum = 0;
-  expenses.forEach(expense => {
-    const id = expense.ExpenseID || expense.EXPENSE_ID;
-    if (id && id.startsWith('EXP_')) {
-      const num = parseInt(id.replace('EXP_', ''), 10);
-      if (!isNaN(num) && num > maxExpenseNum) {
-        maxExpenseNum = num;
-      }
-    }
-  });
-  
-  // Find highest debt ID number
-  let maxDebtNum = 0;
-  debts.forEach(debt => {
-    const id = debt.DebtID || debt.DEBT_ID;
-    if (id && id.startsWith('DEBT_')) {
-      const num = parseInt(id.replace('DEBT_', ''), 10);
-      if (!isNaN(num) && num > maxDebtNum) {
-        maxDebtNum = num;
-      }
-    }
-  });
-  
-  // Find highest return ID number
-  let maxReturnNum = 0;
-  debtReturns.forEach(ret => {
-    const id = ret.ReturnID || ret.RETURN_ID;
-    if (id && id.startsWith('RET_')) {
-      const num = parseInt(id.replace('RET_', ''), 10);
-      if (!isNaN(num) && num > maxReturnNum) {
-        maxReturnNum = num;
-      }
-    }
-  });
-  
-  // Update counters if needed
-  let updated = false;
-  if (maxExpenseNum > counters.expense) {
-    counters.expense = maxExpenseNum;
-    updated = true;
-  }
-  if (maxDebtNum > counters.debt) {
-    counters.debt = maxDebtNum;
-    updated = true;
-  }
-  if (maxReturnNum > counters.return) {
-    counters.return = maxReturnNum;
-    updated = true;
-  }
-  
-  if (updated) {
-    saveIdCounters(counters);
-  }
-  
-  return counters;
+export const syncCountersWithData = async (expenses = [], debts = [], debtReturns = []) => {
+  // No longer needed - sequences are managed in database
+  return { expense: 0, debt: 0, return: 0 };
 };

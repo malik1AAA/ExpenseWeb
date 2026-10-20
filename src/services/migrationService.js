@@ -211,7 +211,7 @@ export const migrateToSupabase = async (data) => {
     if (data.expenses && data.expenses.length > 0) {
       const expensesToInsert = data.expenses.map(expense => ({
         user_id: user.id,
-        expense_id: expense[COLUMNS.EXPENSES.EXPENSE_ID] || `exp_${Date.now()}_${Math.random()}`,
+        expense_id: expense[COLUMNS.EXPENSES.EXPENSE_ID] || `EXPENSE_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         date: expense[COLUMNS.EXPENSES.DATE],
         description: expense[COLUMNS.EXPENSES.DESCRIPTION],
         category: expense[COLUMNS.EXPENSES.CATEGORY],
