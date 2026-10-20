@@ -39,7 +39,7 @@ function Settings() {
         break;
       case 'Privacy Settings':
         // TODO: Implement privacy settings modal
-        alert('Privacy Settings: This feature is coming soon. Your data is stored securely in Supabase with row-level security.');
+        alert('Privacy Settings: This feature is coming soon. ');
         break;
       case 'Notifications':
         // TODO: Implement notification settings
