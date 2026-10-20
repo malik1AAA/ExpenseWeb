@@ -57,7 +57,7 @@ export default function Modal({
       aria-modal="true"
       aria-labelledby="modal-title"
     >
-      <div className={`bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden flex flex-col animate-fade-in`}>
+      <div className={`bg-white dark:bg-surface-900 rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden flex flex-col animate-fade-in`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-200">
           <h2 id="modal-title" className="text-xl font-semibold text-surface-900">{title}</h2>
