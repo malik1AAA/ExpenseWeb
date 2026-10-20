@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bell, X, Check, CreditCard, AlertCircle } from 'lucide-react';
-import { useFinance } from '../../context/FinanceContext';
+import { useFinance } from '../../hooks/useFinance';
 import { COLUMNS } from '../../config/excelSchema';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { formatDate, getDaysBetween } from '../../utils/dateUtils';
