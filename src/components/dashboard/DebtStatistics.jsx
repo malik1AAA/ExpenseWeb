@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { COLUMNS, DEBT_DIRECTION } from '../../config/excelSchema';
 
@@ -117,7 +117,7 @@ export default function DebtStatistics({ debts = [], debtReturns = [] }) {
           {/* Money Lent */}
           <div className="flex items-center justify-between pb-4 border-b border-surface-100">
             <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-surface-500" />
+              <Wallet className="w-4 h-4 text-surface-500" />
               <span className="text-sm text-surface-600">Money Lent</span>
             </div>
             <span className="text-lg font-semibold text-surface-900">
@@ -172,7 +172,7 @@ export default function DebtStatistics({ debts = [], debtReturns = [] }) {
           {/* Money Borrowed */}
           <div className="flex items-center justify-between pb-4 border-b border-surface-100">
             <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-surface-500" />
+              <Wallet className="w-4 h-4 text-surface-500" />
               <span className="text-sm text-surface-600">Money Borrowed</span>
             </div>
             <span className="text-lg font-semibold text-surface-900">

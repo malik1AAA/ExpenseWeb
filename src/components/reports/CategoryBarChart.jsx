@@ -50,7 +50,7 @@ export default function CategoryBarChart({ categoryData = [], getCategoryName, g
               stroke="#64748b"
               fontSize={12}
               tickLine={false}
-              tickFormatter={(value) => `$${value}`}
+              tickFormatter={(value) => `Rs ${value.toLocaleString()}`}
             />
             <Tooltip
               formatter={(value) => formatCurrency(value)}
