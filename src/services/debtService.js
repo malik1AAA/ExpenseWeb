@@ -117,11 +117,16 @@ export const sortDebtsByAmount = (debts, order = 'desc') => {
 /**
  * Create a new debt object
  * @param {Object} debtData - Debt data
- * @returns {Object} New debt with generated ID
+ * @returns {Promise<Object>} New debt with generated ID
  */
-export const createDebt = (debtData) => {
+export const createDebt = async (debtData) => {
+  let debtId = debtData[COL.DEBT_ID];
+  if (!debtId) {
+    debtId = await generateDebtId();
+  }
+  
   return {
-    [COL.DEBT_ID]: debtData[COL.DEBT_ID] || generateDebtId(),
+    [COL.DEBT_ID]: debtId,
     [COL.PERSON]: debtData[COL.PERSON] || '',
     [COL.DEBT_CATEGORY]: debtData[COL.DEBT_CATEGORY] || 'Cash',
     [COL.DIRECTION]: debtData[COL.DIRECTION] || DEBT_DIRECTION.LENT,
@@ -177,11 +182,16 @@ export const calculateRemainingDebt = (debt, returns = []) => {
 /**
  * Create a new debt return object
  * @param {Object} returnData - Return data
- * @returns {Object} New debt return with generated ID
+ * @returns {Promise<Object>} New debt return with generated ID
  */
-export const createDebtReturn = (returnData) => {
+export const createDebtReturn = async (returnData) => {
+  let returnId = returnData[RET_COL.RETURN_ID];
+  if (!returnId) {
+    returnId = await generateReturnId();
+  }
+  
   return {
-    [RET_COL.RETURN_ID]: returnData[RET_COL.RETURN_ID] || generateReturnId(),
+    [RET_COL.RETURN_ID]: returnId,
     [RET_COL.DEBT_ID]: returnData[RET_COL.DEBT_ID] || '',
     [RET_COL.DATE]: returnData[RET_COL.DATE] || new Date().toISOString().split('T')[0],
     [RET_COL.AMOUNT]: Number(returnData[RET_COL.AMOUNT]) || 0,

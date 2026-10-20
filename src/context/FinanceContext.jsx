@@ -6,7 +6,7 @@ import {
   sampleCategories,
 } from '../data/sampleData';
 import { COLUMNS } from '../config/excelSchema';
-import { syncCountersWithData } from '../services/idGeneratorService';
+import { syncCountersWithData, generateExpenseId, generateDebtId, generateReturnId } from '../services/idGeneratorService';
 import { useAuth } from './AuthContext';
 import * as supabaseService from '../services/supabaseDataService';
 
@@ -105,19 +105,6 @@ export function FinanceProvider({ children }) {
   // ---------------------------------------------------------------------------
 
   const clearErrors = useCallback(() => setErrors([]), []);
-
-  /**
-   * Generate a unique ID with a given prefix.
-   * @param {string} prefix - e.g., 'EXP', 'DEBT', 'RET', 'CAT'
-   * @returns {string}
-   */
-  const generateId = useCallback((prefix) => {
-    return (
-      prefix +
-      Date.now().toString(36) +
-      Math.random().toString(36).substring(2, 7).toUpperCase()
-    );
-  }, []);
 
   // ---------------------------------------------------------------------------
   // Import / Clear
@@ -292,9 +279,22 @@ export function FinanceProvider({ children }) {
   const addExpense = useCallback(
     async (expense) => {
       if (!expense) return null;
+      
+      // Generate ID if not provided
+      let expenseId = expense[EXPENSE_ID];
+      if (!expenseId) {
+        try {
+          expenseId = await generateExpenseId();
+        } catch (error) {
+          console.error('Error generating expense ID:', error);
+          setErrors([`Failed to generate expense ID: ${error.message}`]);
+          return null;
+        }
+      }
+      
       const newExpense = {
         ...expense,
-        [EXPENSE_ID]: expense[EXPENSE_ID] || generateId('EXP'),
+        [EXPENSE_ID]: expenseId,
       };
       
       // Update local state immediately
@@ -314,7 +314,7 @@ export function FinanceProvider({ children }) {
       
       return newExpense;
     },
-    [generateId, user]
+    [user]
   );
 
   const updateExpense = useCallback(async (id, expense) => {
@@ -360,9 +360,22 @@ export function FinanceProvider({ children }) {
   const addDebt = useCallback(
     async (debt) => {
       if (!debt) return null;
+      
+      // Generate ID if not provided
+      let debtId = debt[DEBT_ID];
+      if (!debtId) {
+        try {
+          debtId = await generateDebtId();
+        } catch (error) {
+          console.error('Error generating debt ID:', error);
+          setErrors([`Failed to generate debt ID: ${error.message}`]);
+          return null;
+        }
+      }
+      
       const newDebt = {
         ...debt,
-        [DEBT_ID]: debt[DEBT_ID] || generateId('DEBT'),
+        [DEBT_ID]: debtId,
       };
       
       // Update local state immediately
@@ -381,7 +394,7 @@ export function FinanceProvider({ children }) {
       
       return newDebt;
     },
-    [generateId, user]
+    [user]
   );
 
   const updateDebt = useCallback(async (id, debt) => {
@@ -440,9 +453,22 @@ export function FinanceProvider({ children }) {
   const addDebtReturn = useCallback(
     async (returnEntry) => {
       if (!returnEntry) return null;
+      
+      // Generate ID if not provided
+      let returnId = returnEntry[RETURN_ID];
+      if (!returnId) {
+        try {
+          returnId = await generateReturnId();
+        } catch (error) {
+          console.error('Error generating return ID:', error);
+          setErrors([`Failed to generate return ID: ${error.message}`]);
+          return null;
+        }
+      }
+      
       const newReturn = {
         ...returnEntry,
-        [RETURN_ID]: returnEntry[RETURN_ID] || generateId('RET'),
+        [RETURN_ID]: returnId,
       };
       
       // Update local state immediately
@@ -461,7 +487,7 @@ export function FinanceProvider({ children }) {
       
       return newReturn;
     },
-    [generateId, user]
+    [user]
   );
 
   const deleteDebtReturn = useCallback(async (id) => {
@@ -488,14 +514,17 @@ export function FinanceProvider({ children }) {
   const addCategory = useCallback(
     async (category) => {
       if (!category) return null;
+      
+      // Generate category ID from name if not provided
+      const categoryId = category[CATEGORY_ID] ||
+        (category[COLUMNS.CATEGORIES.CATEGORY_NAME] || '')
+          .toLowerCase()
+          .replace(/\s+/g, '-') ||
+        `category_${Date.now()}`;
+      
       const newCategory = {
         ...category,
-        [CATEGORY_ID]:
-          category[CATEGORY_ID] ||
-          (category[COLUMNS.CATEGORIES.CATEGORY_NAME] || '')
-            .toLowerCase()
-            .replace(/\s+/g, '-') ||
-          generateId('CAT'),
+        [CATEGORY_ID]: categoryId,
       };
       
       // Update local state immediately
@@ -514,7 +543,7 @@ export function FinanceProvider({ children }) {
       
       return newCategory;
     },
-    [generateId, user]
+    [user]
   );
 
   const updateCategory = useCallback(async (id, category) => {
