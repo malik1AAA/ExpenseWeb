@@ -39,7 +39,7 @@ function CategoryChart() {
               <YAxis 
                 stroke="#64748b"
                 fontSize={12}
-                tickFormatter={(value) => `$${value}`}
+                tickFormatter={(value) => `Rs ${value.toLocaleString()}`}
               />
               <Tooltip 
                 formatter={(value) => formatCurrency(value)}

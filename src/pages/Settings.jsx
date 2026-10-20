@@ -9,9 +9,48 @@ import {
   Download,
   Upload,
 } from "lucide-react";
+import { useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
 import { ExcelManager, CategoryManager, DataIntegrityChecker, MigrationManager } from '../components/settings';
 
 function Settings() {
+  const { theme, setTheme } = useTheme();
+  const [compactMode, setCompactMode] = useState(false);
+  const excelManagerRef = useRef(null);
+
+  const handleThemeChange = (e) => {
+    setTheme(e.target.value);
+  };
+
+  const handleQuickAction = (action) => {
+    switch (action) {
+      case 'Export All Data':
+        // Scroll to ExcelManager section where export is available
+        const excelSection = document.getElementById('excel-manager-section');
+        if (excelSection) {
+          excelSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        break;
+      case 'Import from Excel':
+        // Scroll to ExcelManager section
+        const importSection = document.getElementById('excel-manager-section');
+        if (importSection) {
+          importSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        break;
+      case 'Privacy Settings':
+        // TODO: Implement privacy settings modal
+        alert('Privacy Settings: This feature is coming soon. Your data is stored securely in Supabase with row-level security.');
+        break;
+      case 'Notifications':
+        // TODO: Implement notification settings
+        alert('Notification Settings: This feature is coming soon. You will be able to configure alerts for overdue debts and other events.');
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -27,7 +66,9 @@ function Settings() {
         {/* Main Settings */}
         <div className="lg:col-span-2 space-y-6">
           {/* Excel Data Management */}
-          <ExcelManager />
+          <div id="excel-manager-section">
+            <ExcelManager />
+          </div>
 
           {/* Category Management */}
           <CategoryManager />
@@ -56,16 +97,29 @@ function Settings() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-surface-700">Theme</span>
-                <select className="px-3 py-1.5 border border-surface-200 rounded-lg text-sm text-surface-600 focus:outline-none focus:ring-2 focus:ring-primary-500">
-                  <option>Light</option>
-                  <option>Dark</option>
-                  <option>System</option>
+                <select 
+                  value={theme}
+                  onChange={handleThemeChange}
+                  className="px-3 py-1.5 border border-surface-200 rounded-lg text-sm text-surface-600 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                  <option value="system">System</option>
                 </select>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-surface-700">Compact Mode</span>
-                <button className="w-10 h-6 bg-surface-200 rounded-full relative transition-colors">
-                  <span className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transition-transform"></span>
+                <button 
+                  onClick={() => setCompactMode(!compactMode)}
+                  className={`w-10 h-6 rounded-full relative transition-colors ${
+                    compactMode ? 'bg-primary-500' : 'bg-surface-200'
+                  }`}
+                >
+                  <span 
+                    className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      compactMode ? 'translate-x-5' : 'translate-x-1'
+                    }`}
+                  ></span>
                 </button>
               </div>
             </div>
@@ -88,6 +142,7 @@ function Settings() {
               ].map((action) => (
                 <button
                   key={action.label}
+                  onClick={() => handleQuickAction(action.label)}
                   className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-surface-700 hover:bg-surface-50 transition-colors text-left"
                 >
                   <action.icon className={`w-4 h-4 ${action.color}`} />

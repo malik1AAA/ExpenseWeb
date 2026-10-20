@@ -2,10 +2,14 @@ import { Menu, Bell, Search, LogOut, User } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import ThemeToggle from "../common/ThemeToggle";
+import SearchModal from "./SearchModal";
+import NotificationPanel from "./NotificationPanel";
 
 function Header({ onMenuClick }) {
   const { user, signOut } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -41,15 +45,29 @@ function Header({ onMenuClick }) {
         <ThemeToggle />
 
         {/* Search */}
-        <button className="p-2 rounded-lg hover:bg-surface-200 transition-colors text-surface-500 hover:text-surface-700">
+        <button 
+          onClick={() => setShowSearch(true)}
+          className="p-2 rounded-lg hover:bg-surface-200 transition-colors text-surface-500 hover:text-surface-700"
+          title="Search (Ctrl+K)"
+        >
           <Search className="w-5 h-5" />
         </button>
 
         {/* Notifications */}
-        <button className="relative p-2 rounded-lg hover:bg-surface-200 transition-colors text-surface-500 hover:text-surface-700">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-        </button>
+        <div className="relative">
+          <button 
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="relative p-2 rounded-lg hover:bg-surface-200 transition-colors text-surface-500 hover:text-surface-700"
+            title="Notifications"
+          >
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
+          <NotificationPanel 
+            isOpen={showNotifications} 
+            onClose={() => setShowNotifications(false)} 
+          />
+        </div>
 
         {/* User menu */}
         <div className="relative ml-2">
@@ -107,6 +125,12 @@ function Header({ onMenuClick }) {
           )}
         </div>
       </div>
+
+      {/* Search Modal */}
+      <SearchModal 
+        isOpen={showSearch} 
+        onClose={() => setShowSearch(false)} 
+      />
     </header>
   );
 }

@@ -49,7 +49,7 @@ export default function AnnualMonthlyChart({ expenses = [], year, chartType = 'b
                 stroke="#64748b"
                 fontSize={12}
                 tickLine={false}
-                tickFormatter={(value) => `$${value}`}
+                tickFormatter={(value) => `Rs ${value.toLocaleString()}`}
               />
               <Tooltip
                 formatter={(value) => formatCurrency(value)}
@@ -83,7 +83,7 @@ export default function AnnualMonthlyChart({ expenses = [], year, chartType = 'b
                 stroke="#64748b"
                 fontSize={12}
                 tickLine={false}
-                tickFormatter={(value) => `$${value}`}
+                tickFormatter={(value) => `Rs ${value.toLocaleString()}`}
               />
               <Tooltip
                 formatter={(value) => formatCurrency(value)}
