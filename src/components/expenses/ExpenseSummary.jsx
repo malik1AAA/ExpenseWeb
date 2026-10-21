@@ -2,12 +2,14 @@ import { useMemo } from 'react';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { COLUMNS } from '../../config/excelSchema';
 import { Receipt, DollarSign, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { getAverageDailyExpense } from '../../services/calculationService';
+import { getCurrentYearMonth } from '../../services/calculationService';
 
 /**
  * ExpenseSummary - Summary statistics for filtered expenses
- * Displays count, total, average, and largest expense
+ * Displays count, total, average daily expense, and largest expense
  */
-export default function ExpenseSummary({ expenses = [] }) {
+export default function ExpenseSummary({ expenses = [], filters = {} }) {
   // Memoize all calculations
   const stats = useMemo(() => {
     const count = expenses.length;
@@ -17,7 +19,19 @@ export default function ExpenseSummary({ expenses = [] }) {
       return sum + amount;
     }, 0);
 
-    const average = count > 0 ? total / count : 0;
+    // Calculate average daily expense
+    let average = 0;
+    
+    // If month and year filters are set, calculate average for that specific month
+    if (filters.month !== '' && filters.year !== '') {
+      const month = parseInt(filters.month, 10);
+      const year = parseInt(filters.year, 10);
+      average = getAverageDailyExpense(expenses, year, month);
+    } else {
+      // If no month/year filter, use current month
+      const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
+      average = getAverageDailyExpense(expenses, currentYear, currentMonth);
+    }
 
     const largest = expenses.reduce((max, expense) => {
       const amount = parseFloat(expense[COLUMNS.EXPENSES.AMOUNT]) || 0;
@@ -38,7 +52,7 @@ export default function ExpenseSummary({ expenses = [] }) {
         color: 'green',
       },
       {
-        label: 'Average Expense',
+        label: 'Average Daily Expense',
         value: formatCurrency(average),
         icon: TrendingUp,
         color: 'purple',
@@ -50,7 +64,7 @@ export default function ExpenseSummary({ expenses = [] }) {
         color: 'amber',
       },
     ];
-  }, [expenses]);
+  }, [expenses, filters]);
 
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-600',

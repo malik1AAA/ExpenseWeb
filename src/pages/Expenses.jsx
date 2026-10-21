@@ -95,7 +95,7 @@ export default function Expenses() {
       </PageHeader>
 
       {/* Summary */}
-      <ExpenseSummary expenses={filteredExpenses} />
+      <ExpenseSummary expenses={filteredExpenses} filters={filters} />
 
       {/* Filters */}
       <ExpenseFilters

@@ -6,7 +6,7 @@
  */
 
 import { COLUMNS } from '../config/excelSchema';
-import { parseISO, getYear, getMonth, isValid } from 'date-fns';
+import { parseISO, getYear, getMonth, isValid, getDaysInMonth, startOfMonth, endOfMonth, isBefore, isSameDay, isAfter } from 'date-fns';
 
 // Field references from schema
 const DATE_FIELD = COLUMNS.EXPENSES.DATE;
@@ -244,6 +244,84 @@ export const getAverageMonthlySpending = (expenses, year) => {
   
   // Always divide by 12 months, even if some months have no expenses
   return annualTotal / 12;
+};
+
+/**
+ * Calculate average daily expense for a specific month
+ * 
+ * For past months: Total expenses / Total calendar days in month
+ * For current month: Total expenses (up to today) / Days elapsed (up to today)
+ * 
+ * @param {Array} expenses - Array of expense objects
+ * @param {number} year - Year
+ * @param {number} month - Month (0-11, where 0 = January)
+ * @param {Date} [referenceDate] - Optional reference date (defaults to today)
+ * @returns {number} Average daily expense (0 if no expenses or invalid period)
+ */
+export const getAverageDailyExpense = (expenses, year, month, referenceDate = new Date()) => {
+  if (!Array.isArray(expenses) || year === undefined || month === undefined) {
+    return 0;
+  }
+
+  // Get the start and end of the target month
+  const monthStart = startOfMonth(new Date(year, month, 1));
+  const monthEnd = endOfMonth(monthStart);
+  
+  // Determine if this is the current month
+  const currentMonthStart = startOfMonth(referenceDate);
+  const isCurrentMonth = getYear(currentMonthStart) === year && getMonth(currentMonthStart) === month;
+  
+  // Calculate the period end date
+  let periodEnd;
+  let daysInPeriod;
+  
+  if (isCurrentMonth) {
+    // For current month: use today as the end date
+    periodEnd = referenceDate;
+    // Calculate days from start of month to today (inclusive)
+    daysInPeriod = Math.floor((periodEnd - monthStart) / (1000 * 60 * 60 * 24)) + 1;
+  } else if (isBefore(monthEnd, referenceDate)) {
+    // For past months: use the full month
+    periodEnd = monthEnd;
+    daysInPeriod = getDaysInMonth(monthStart);
+  } else {
+    // For future months: no data available
+    return 0;
+  }
+  
+  // Filter expenses within the period
+  const periodExpenses = expenses.filter((expense) => {
+    const expenseDate = parseDate(expense[DATE_FIELD]);
+    if (!expenseDate) return false;
+    
+    // Must be within the month
+    if (!isSameMonth(expenseDate, monthStart)) return false;
+    
+    // For current month, must not be after today
+    if (isCurrentMonth && isAfter(expenseDate, periodEnd)) return false;
+    
+    return true;
+  });
+  
+  // Calculate total for the period
+  const total = periodExpenses.reduce((sum, expense) => {
+    return sum + toNumber(expense[AMOUNT_FIELD]);
+  }, 0);
+  
+  // Avoid division by zero
+  if (daysInPeriod === 0) return 0;
+  
+  return total / daysInPeriod;
+};
+
+/**
+ * Helper function to check if a date is in the same month as another date
+ * @param {Date} date1 - First date
+ * @param {Date} date2 - Second date
+ * @returns {boolean} True if same month and year
+ */
+const isSameMonth = (date1, date2) => {
+  return getYear(date1) === getYear(date2) && getMonth(date1) === getMonth(date2);
 };
 
 /**
