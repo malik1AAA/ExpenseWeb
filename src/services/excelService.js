@@ -155,7 +155,7 @@ const toDateString = (value) => {
   }
   
   // Try common date formats
-  // MM/DD/YYYY or DD/MM/YYYY - assume MM/DD/YYYY for US format
+  // Detect DD/MM/YYYY vs MM/DD/YYYY format
   const parts = str.split(/[\/\-\.]/);
   if (parts.length === 3) {
     const [p1, p2, p3] = parts.map(p => parseInt(p, 10));
@@ -168,14 +168,30 @@ const toDateString = (value) => {
       month = p2;
       day = p3;
     } else if (p3 > 31) {
-      // MM/DD/YYYY
-      month = p1;
-      day = p2;
-      year = p3;
+      // Either MM/DD/YYYY or DD/MM/YYYY
+      // If p1 > 12, it must be DD/MM/YYYY (since month can't be > 12)
+      // If p2 > 12, it must be MM/DD/YYYY (since day can't be > 12 in that position)
+      // If both <= 12, assume DD/MM/YYYY (common in many countries)
+      if (p1 > 12 && p2 <= 12) {
+        // DD/MM/YYYY
+        day = p1;
+        month = p2;
+        year = p3;
+      } else if (p2 > 12 && p1 <= 12) {
+        // MM/DD/YYYY
+        month = p1;
+        day = p2;
+        year = p3;
+      } else {
+        // Ambiguous - assume DD/MM/YYYY (more common internationally)
+        day = p1;
+        month = p2;
+        year = p3;
+      }
     } else {
-      // Ambiguous - assume MM/DD/YYYY
-      month = p1;
-      day = p2;
+      // Ambiguous - assume DD/MM/YYYY
+      day = p1;
+      month = p2;
       year = p3 < 100 ? 2000 + p3 : p3;
     }
     
@@ -408,9 +424,9 @@ const validateColumns = (rows, sheetName) => {
  * @param {Array} expenses - Array of expense objects
  * @param {Array} debts - Array of debt objects
  * @param {Array} debtReturns - Array of debt return objects
- * @returns {{ expenses: Array, debts: Array, debtReturns: Array }}
+ * @returns {Promise<{ expenses: Array, debts: Array, debtReturns: Array }>}
  */
-const autoGenerateMissingIds = (expenses, debts, debtReturns) => {
+const autoGenerateMissingIds = async (expenses, debts, debtReturns) => {
   // Track existing IDs to ensure uniqueness
   const existingExpenseIds = new Set();
   const existingDebtIds = new Set();
@@ -438,14 +454,14 @@ const autoGenerateMissingIds = (expenses, debts, debtReturns) => {
     }
   });
   
-  // Second pass: generate IDs for records missing them
-  const processedExpenses = expenses.map(expense => {
+  // Second pass: generate IDs for records missing them (async)
+  const processedExpenses = await Promise.all(expenses.map(async (expense) => {
     const id = expense[COLUMNS.EXPENSES.EXPENSE_ID];
     if (!id || existingExpenseIds.has(id)) {
-      // Generate new unique ID
+      // Generate new unique ID (async)
       let newId;
       do {
-        newId = generateExpenseId();
+        newId = await generateExpenseId();
       } while (existingExpenseIds.has(newId));
       
       existingExpenseIds.add(newId);
@@ -455,15 +471,15 @@ const autoGenerateMissingIds = (expenses, debts, debtReturns) => {
       };
     }
     return expense;
-  });
+  }));
   
-  const processedDebts = debts.map(debt => {
+  const processedDebts = await Promise.all(debts.map(async (debt) => {
     const id = debt[COLUMNS.DEBTS.DEBT_ID];
     if (!id || existingDebtIds.has(id)) {
-      // Generate new unique ID
+      // Generate new unique ID (async)
       let newId;
       do {
-        newId = generateDebtId();
+        newId = await generateDebtId();
       } while (existingDebtIds.has(newId));
       
       existingDebtIds.add(newId);
@@ -473,15 +489,15 @@ const autoGenerateMissingIds = (expenses, debts, debtReturns) => {
       };
     }
     return debt;
-  });
+  }));
   
-  const processedReturns = debtReturns.map(ret => {
+  const processedReturns = await Promise.all(debtReturns.map(async (ret) => {
     const id = ret[COLUMNS.DEBT_RETURNS.RETURN_ID];
     if (!id || existingReturnIds.has(id)) {
-      // Generate new unique ID
+      // Generate new unique ID (async)
       let newId;
       do {
-        newId = generateReturnId();
+        newId = await generateReturnId();
       } while (existingReturnIds.has(newId));
       
       existingReturnIds.add(newId);
@@ -491,7 +507,7 @@ const autoGenerateMissingIds = (expenses, debts, debtReturns) => {
       };
     }
     return ret;
-  });
+  }));
   
   return {
     expenses: processedExpenses,
@@ -513,16 +529,16 @@ const autoGenerateMissingIds = (expenses, debts, debtReturns) => {
  * - Auto-generates missing IDs
  * 
  * @param {Object} workbook - XLSX workbook object
- * @returns {{ 
+ * @returns {Promise<{ 
  *   expenses: Array, 
  *   debts: Array, 
  *   debtReturns: Array, 
  *   categories: Array,
  *   errors: string[],
  *   warnings: string[]
- * }}
+ * }>}
  */
-export const parseWorkbook = (workbook) => {
+export const parseWorkbook = async (workbook) => {
   const result = {
     expenses: [],
     debts: [],
@@ -577,8 +593,8 @@ export const parseWorkbook = (workbook) => {
     result[key] = rows;
   });
   
-  // Auto-generate missing IDs and ensure uniqueness
-  const processed = autoGenerateMissingIds(
+  // Auto-generate missing IDs and ensure uniqueness (async)
+  const processed = await autoGenerateMissingIds(
     result.expenses,
     result.debts,
     result.debtReturns
@@ -639,7 +655,7 @@ export const readExcelFile = (file) => {
     
     const reader = new FileReader();
     
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = new Uint8Array(e.target.result);
         
@@ -651,7 +667,7 @@ export const readExcelFile = (file) => {
           cellText: false,
         });
         
-        const result = parseWorkbook(workbook);
+        const result = await parseWorkbook(workbook);
         
         // Validate the imported data
         const validationResult = validateImportedData(result);
