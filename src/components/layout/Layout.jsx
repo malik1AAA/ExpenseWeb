@@ -1,9 +1,13 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import { useInactivityTimeout } from "../../hooks/useInactivityTimeout";
 
 function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Initialize inactivity timeout (2 minutes = 120000ms)
+  useInactivityTimeout(120000);
 
   return (
     <div className="flex h-screen bg-surface-50 overflow-hidden">

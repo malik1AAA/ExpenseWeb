@@ -21,7 +21,15 @@ export const fetchExpenses = async () => {
 
   const { data, error } = await supabase
     .from('expenses')
-    .select('*')
+    .select(`
+      expense_id,
+      date,
+      description,
+      category,
+      amount,
+      payment_method,
+      notes
+    `)
     .eq('user_id', user.id)
     .order('date', { ascending: false });
 
@@ -127,7 +135,16 @@ export const fetchDebts = async () => {
 
   const { data, error } = await supabase
     .from('debts')
-    .select('*')
+    .select(`
+      debt_id,
+      person,
+      debt_category,
+      direction,
+      original_amount,
+      date,
+      due_date,
+      notes
+    `)
     .eq('user_id', user.id)
     .order('date', { ascending: false });
 
@@ -279,7 +296,13 @@ export const fetchDebtReturns = async () => {
 
   const { data, error } = await supabase
     .from('debt_returns')
-    .select('*')
+    .select(`
+      return_id,
+      debt_id,
+      date,
+      amount,
+      notes
+    `)
     .eq('user_id', user.id)
     .order('date', { ascending: false });
 
@@ -352,7 +375,11 @@ export const fetchCategories = async () => {
 
   const { data, error } = await supabase
     .from('categories')
-    .select('*')
+    .select(`
+      category_id,
+      category_name,
+      type
+    `)
     .eq('user_id', user.id)
     .order('category_name', { ascending: true });
 
