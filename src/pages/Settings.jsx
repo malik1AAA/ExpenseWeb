@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { ExcelManager, CategoryManager, DataIntegrityChecker, MigrationManager } from '../components/settings';
+import { SequentialImportManager, CategoryManager, DataIntegrityChecker, MigrationManager } from '../components/settings';
 
 function Settings() {
   const { theme, setTheme } = useTheme();
@@ -66,7 +66,7 @@ function Settings() {
         <div className="lg:col-span-2 space-y-6">
           {/* Excel Data Management */}
           <div id="excel-manager-section">
-            <ExcelManager />
+            <SequentialImportManager />
           </div>
 
           {/* Category Management */}
