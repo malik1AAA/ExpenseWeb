@@ -19,7 +19,7 @@ export default function ReportSummary({ total = 0, count = 0, average = 0, large
       color: 'green',
     },
     {
-      label: 'Average Expense',
+      label: 'Average Daily Expense',
       value: formatCurrency(average),
       icon: TrendingUp,
       color: 'purple',

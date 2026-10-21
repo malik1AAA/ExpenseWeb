@@ -4,6 +4,7 @@ import {
   getMonthlyTotal,
   getExpenseCount,
   getAverageMonthlySpending,
+  getAverageDailyExpense,
   findHighestExpense,
   getCategoryTotals,
   getExpensesForMonth,
@@ -44,7 +45,7 @@ export default function Reports() {
   const monthExpenses = getExpensesForMonth(expenses, selectedYear, selectedMonth);
   const total = getMonthlyTotal(expenses, selectedYear, selectedMonth);
   const count = getExpenseCount(monthExpenses);
-  const average = getAverageMonthlySpending(expenses, selectedYear) / 12;
+  const average = getAverageDailyExpense(expenses, selectedYear, selectedMonth);
   const highestExpense = findHighestExpense(monthExpenses);
   const largest = highestExpense ? parseFloat(highestExpense[COLUMNS.EXPENSES.AMOUNT]) : 0;
   const categoryTotals = getCategoryTotals(expenses, selectedYear, selectedMonth);
@@ -58,6 +59,27 @@ export default function Reports() {
   const annualExpenses = getExpensesForYear(expenses, selectedYear);
   const annualCount = getExpenseCount(annualExpenses);
   const annualAverage = getAverageMonthlySpending(expenses, selectedYear);
+  
+  // Calculate average daily expense for the year
+  // For past years: divide by 365 or 366 (leap year)
+  // For current year: divide by days elapsed so far
+  const isCurrentYear = selectedYear === currentYear;
+  let annualDailyAverage = 0;
+  
+  if (isCurrentYear) {
+    // For current year: calculate from Jan 1 to today
+    const today = new Date();
+    const startOfYear = new Date(selectedYear, 0, 1);
+    const daysElapsed = Math.floor((today - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+    annualDailyAverage = daysElapsed > 0 ? annualTotal / daysElapsed : 0;
+  } else if (selectedYear < currentYear) {
+    // For past years: divide by days in year
+    const isLeapYear = (selectedYear % 4 === 0 && selectedYear % 100 !== 0) || (selectedYear % 400 === 0);
+    const daysInYear = isLeapYear ? 366 : 365;
+    annualDailyAverage = annualTotal / daysInYear;
+  }
+  // For future years, annualDailyAverage remains 0
+  
   const highestMonth = getHighestSpendingMonth(expenses, selectedYear);
   const lowestMonth = getLowestSpendingMonth(expenses, selectedYear);
   const highestCategory = getHighestSpendingCategoryForYear(expenses, selectedYear);
@@ -168,7 +190,7 @@ export default function Reports() {
             year={selectedYear}
             annualTotal={annualTotal}
             annualCount={annualCount}
-            averageMonthly={annualAverage}
+            averageDaily={annualDailyAverage}
             highestMonth={highestMonth}
             lowestMonth={lowestMonth}
             highestCategory={highestCategory}
