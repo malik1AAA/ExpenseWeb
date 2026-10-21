@@ -159,7 +159,7 @@ function Settings() {
             <div className="space-y-2 text-sm text-surface-500">
               <div className="flex justify-between">
                 <span>Version</span>
-                <span className="font-medium text-surface-700">1.0.0</span>
+                <span className="font-medium text-surface-700">1.1.1</span>
               </div>
               <div className="flex justify-between">
                 <span>Data Source</span>
