@@ -8,6 +8,13 @@ import { generateDebtId, generateReturnId } from './idGeneratorService';
 const COL = COLUMNS.DEBTS;
 const RET_COL = COLUMNS.DEBT_RETURNS;
 
+export const getDebtReturnKey = (debt) =>
+  debt[COL.DATABASE_ID] || debt[COL.DEBT_ID];
+
+export const matchesDebtReturn = (debt, debtReturn) =>
+  getDebtReturnKey(debt) ===
+  (debtReturn[RET_COL.DEBT_DATABASE_ID] || debtReturn[RET_COL.DEBT_ID]);
+
 /**
  * Calculate monthly interest
  * @param {number} principal - Remaining principal
@@ -171,9 +178,8 @@ export const calculateDebtSummary = (debts, returns = []) => {
  * @returns {number} Remaining amount
  */
 export const calculateRemainingDebt = (debt, returns = []) => {
-  const debtId = debt[COL.DEBT_ID];
   const totalReturned = returns
-    .filter(ret => ret[RET_COL.DEBT_ID] === debtId)
+    .filter(ret => matchesDebtReturn(debt, ret))
     .reduce((sum, ret) => sum + ret[RET_COL.AMOUNT], 0);
   
   return debt[COL.ORIGINAL_AMOUNT] - totalReturned;

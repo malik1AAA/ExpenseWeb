@@ -5,6 +5,7 @@ import { COLUMNS, DEBT_DIRECTION } from '../../config/excelSchema';
 import { Edit, Trash2, DollarSign } from 'lucide-react';
 import { SortableHeader } from '../common';
 import { useSortableTable } from '../../hooks/useSortableTable';
+import { getDebtReturnKey } from '../../services/debtService';
 
 /**
  * DebtTable - Table displaying debts with calculated fields and interactive sorting
@@ -16,13 +17,16 @@ export default function DebtTable({
   onEdit, 
   onDelete,
   onRecordReturn,
+  onSubmitRepaymentRequest,
+  requiresParticipantConfirmation = () => false,
+  canManageDebt = () => true,
   onViewDetails
 }) {
   // Create a map of debt returns by debt ID for O(1) lookups
   const debtReturnsByDebtId = useMemo(() => {
     const map = new Map();
     debtReturns.forEach((ret) => {
-      const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
+      const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_DATABASE_ID] || ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
       if (!map.has(debtId)) {
         map.set(debtId, []);
       }
@@ -34,7 +38,7 @@ export default function DebtTable({
   // Calculate remaining amount for a debt (memoized)
   const calculateRemaining = useCallback(
     (debt) => {
-      const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+      const debtId = getDebtReturnKey(debt);
       const returns = debtReturnsByDebtId.get(debtId) || [];
       const totalReturned = returns.reduce(
         (sum, ret) => sum + parseFloat(ret[COLUMNS.DEBT_RETURNS.AMOUNT] || 0),
@@ -182,10 +186,15 @@ export default function DebtTable({
               const remaining = debt._remaining;
               const status = debt._status;
               const isLent = debt[COLUMNS.DEBTS.DIRECTION] === DEBT_DIRECTION.LENT;
+              const isOwner = canManageDebt(debt);
+              const needsConfirmation = requiresParticipantConfirmation(debt);
+              const canRecordDirectly = isOwner && (isLent || !needsConfirmation);
+              const canRequestRepayment = onSubmitRepaymentRequest &&
+                ((isOwner && !isLent && needsConfirmation) || (!isOwner && isLent));
 
               return (
                 <tr 
-                  key={debt[COLUMNS.DEBTS.DEBT_ID]} 
+                  key={debt[COLUMNS.DEBTS.DATABASE_ID] || debt[COLUMNS.DEBTS.DEBT_ID]}
                   className="hover:bg-surface-50 transition-colors cursor-pointer"
                   onClick={() => onViewDetails && onViewDetails(debt)}
                 >
@@ -226,7 +235,7 @@ export default function DebtTable({
                   </td>
                   <td className="px-4 py-3 text-sm text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {remaining > 0 && onRecordReturn && (
+                      {remaining > 0 && canRecordDirectly && onRecordReturn && (
                         <button
                           type="button"
                           aria-label={`Record payment for ${debt[COLUMNS.DEBTS.PERSON]}`}
@@ -240,30 +249,48 @@ export default function DebtTable({
                           <DollarSign className="w-4 h-4 text-green-600" />
                         </button>
                       )}
-                      <button
-                        type="button"
-                        aria-label={`Edit debt for ${debt[COLUMNS.DEBTS.PERSON]}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onEdit) onEdit(debt);
-                        }}
-                        className="p-1.5 rounded-lg hover:bg-surface-100 transition-colors"
-                        title="Edit"
-                      >
-                        <Edit className="w-4 h-4 text-surface-600" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Delete debt for ${debt[COLUMNS.DEBTS.PERSON]}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onDelete) onDelete(debt);
-                        }}
-                        className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </button>
+                      {remaining > 0 && canRequestRepayment && (
+                        <button
+                          type="button"
+                          aria-label={`${isOwner ? 'Request payment confirmation' : 'Submit repayment request'} for ${debt[COLUMNS.DEBTS.PERSON]}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSubmitRepaymentRequest(debt, isOwner);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+                          title={isOwner ? 'Request payment confirmation' : 'Submit repayment request'}
+                        >
+                          <DollarSign className="w-4 h-4 text-blue-600" />
+                        </button>
+                      )}
+                      {isOwner && (
+                        <>
+                          <button
+                            type="button"
+                            aria-label={`Edit debt for ${debt[COLUMNS.DEBTS.PERSON]}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEdit?.(debt);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-surface-100 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4 text-surface-600" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Delete debt for ${debt[COLUMNS.DEBTS.PERSON]}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete?.(debt);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

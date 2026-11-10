@@ -1,5 +1,6 @@
 import { COLUMNS, DEBT_DIRECTION } from '../config/excelSchema';
 import { parseISO, isAfter, isBefore, isValid } from 'date-fns';
+import { getDebtReturnKey } from './debtService';
 
 /**
  * Create a map of debt returns by debt ID for O(1) lookups
@@ -10,7 +11,7 @@ import { parseISO, isAfter, isBefore, isValid } from 'date-fns';
 export const createDebtReturnsMap = (debtReturns) => {
   const map = new Map();
   debtReturns.forEach((ret) => {
-    const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
+    const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_DATABASE_ID] || ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
     if (!map.has(debtId)) {
       map.set(debtId, []);
     }
@@ -27,7 +28,7 @@ export const createDebtReturnsMap = (debtReturns) => {
  * @returns {string} Status: 'Paid', 'Partial', 'Overdue', or 'Active'
  */
 export const calculateDebtStatus = (debt, debtReturnsMap) => {
-  const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+  const debtId = getDebtReturnKey(debt);
   const originalAmount = parseFloat(debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0);
   
   const returns = debtReturnsMap.get(debtId) || [];

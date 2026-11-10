@@ -6,6 +6,7 @@ import {
   CreditCard,
   Settings,
   Wallet,
+  Users,
   X,
 } from "lucide-react";
 
@@ -14,6 +15,7 @@ const navigation = [
   { name: "Expenses", href: "/expenses", icon: Receipt },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Debts", href: "/debts", icon: CreditCard },
+  { name: "People", href: "/people", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

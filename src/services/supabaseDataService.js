@@ -133,25 +133,22 @@ export const fetchDebts = async () => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
 
-  const { data, error } = await supabase
-    .from('debts')
-    .select(`
-      debt_id,
-      person,
-      debt_category,
-      direction,
-      original_amount,
-      date,
-      due_date,
-      notes
-    `)
-    .eq('user_id', user.id)
-    .order('date', { ascending: false });
-
-  if (error) throw error;
+  const [debtsResult, ownedResult] = await Promise.all([
+    supabase
+      .from('debts')
+      .select('id, debt_id, person_id, person, debt_category, direction, original_amount, date, due_date, notes')
+      .order('date', { ascending: false }),
+    supabase.from('debts').select('id').eq('user_id', user.id),
+  ]);
+  if (debtsResult.error) throw debtsResult.error;
+  if (ownedResult.error) throw ownedResult.error;
+  const ownedDebtIds = new Set(ownedResult.data.map(row => row.id));
   
-  return data.map(row => ({
+  return debtsResult.data.map(row => ({
+    [COLUMNS.DEBTS.DATABASE_ID]: row.id,
+    [COLUMNS.DEBTS.IS_OWNER]: ownedDebtIds.has(row.id),
     [COLUMNS.DEBTS.DEBT_ID]: row.debt_id,
+    [COLUMNS.DEBTS.PERSON_ID]: row.person_id,
     [COLUMNS.DEBTS.PERSON]: row.person,
     [COLUMNS.DEBTS.DEBT_CATEGORY]: row.debt_category,
     [COLUMNS.DEBTS.DIRECTION]: row.direction,
@@ -176,6 +173,7 @@ export const createDebt = async (debt) => {
     .insert({
       user_id: user.id,
       debt_id: debt[COLUMNS.DEBTS.DEBT_ID],
+      person_id: debt[COLUMNS.DEBTS.PERSON_ID],
       person: debt[COLUMNS.DEBTS.PERSON],
       debt_category: debt[COLUMNS.DEBTS.DEBT_CATEGORY],
       direction: debt[COLUMNS.DEBTS.DIRECTION],
@@ -188,7 +186,11 @@ export const createDebt = async (debt) => {
     .single();
 
   if (error) throw error;
-  return debt;
+  return {
+    ...debt,
+    [COLUMNS.DEBTS.DATABASE_ID]: data.id,
+    [COLUMNS.DEBTS.IS_OWNER]: true,
+  };
 };
 
 /**
@@ -206,6 +208,9 @@ export const updateDebt = async (debtId, updates) => {
   // Use consistent null/undefined checks for all fields
   if (updates[COLUMNS.DEBTS.PERSON] !== undefined && updates[COLUMNS.DEBTS.PERSON] !== null) {
     updateData.person = updates[COLUMNS.DEBTS.PERSON];
+  }
+  if (updates[COLUMNS.DEBTS.PERSON_ID] !== undefined) {
+    updateData.person_id = updates[COLUMNS.DEBTS.PERSON_ID];
   }
   if (updates[COLUMNS.DEBTS.DEBT_CATEGORY] !== undefined && updates[COLUMNS.DEBTS.DEBT_CATEGORY] !== null) {
     updateData.debt_category = updates[COLUMNS.DEBTS.DEBT_CATEGORY];
@@ -233,7 +238,7 @@ export const updateDebt = async (debtId, updates) => {
   }
 
   // Perform the update and check how many rows were affected
-  const { data, error, count } = await supabase
+  const { data, error } = await supabase
     .from('debts')
     .update(updateData)
     .eq('user_id', user.id)
@@ -253,7 +258,10 @@ export const updateDebt = async (debtId, updates) => {
 
   // Return the updated data from the database
   return {
+    [COLUMNS.DEBTS.DATABASE_ID]: data.id,
+    [COLUMNS.DEBTS.IS_OWNER]: true,
     [COLUMNS.DEBTS.DEBT_ID]: data.debt_id,
+    [COLUMNS.DEBTS.PERSON_ID]: data.person_id,
     [COLUMNS.DEBTS.PERSON]: data.person,
     [COLUMNS.DEBTS.DEBT_CATEGORY]: data.debt_category,
     [COLUMNS.DEBTS.DIRECTION]: data.direction,
@@ -288,7 +296,7 @@ export const deleteDebt = async (debtId) => {
 
 /**
  * Fetch all debt returns for the current user
- * @returns {Promise<Array>} Array of debt return objects
+ * @returns {Promise<Array>} Returns visible for owned and explicitly shared debts
  */
 export const fetchDebtReturns = async () => {
   const { data: { user } } = await supabase.auth.getUser();
@@ -301,15 +309,16 @@ export const fetchDebtReturns = async () => {
       debt_id,
       date,
       amount,
-      notes
+      notes,
+      debts!fk_debt_returns_debt(id)
     `)
-    .eq('user_id', user.id)
     .order('date', { ascending: false });
 
   if (error) throw error;
   
   return data.map(row => ({
     [COLUMNS.DEBT_RETURNS.RETURN_ID]: row.return_id,
+    [COLUMNS.DEBT_RETURNS.DEBT_DATABASE_ID]: row.debts?.id || null,
     [COLUMNS.DEBT_RETURNS.DEBT_ID]: row.debt_id,
     [COLUMNS.DEBT_RETURNS.DATE]: row.date,
     [COLUMNS.DEBT_RETURNS.AMOUNT]: parseFloat(row.amount),
@@ -502,9 +511,42 @@ export const importData = async (data) => {
 
   // Import debts
   if (data.debts && data.debts.length > 0) {
+    const { data: existingPeople, error: peopleError } = await supabase
+      .from('people')
+      .select('id, name, normalized_name')
+      .eq('owner_user_id', user.id);
+    if (peopleError) throw peopleError;
+
+    const peopleByNormalizedName = new Map(
+      existingPeople.map(person => [person.normalized_name, person])
+    );
+    const namesToCreate = new Map();
+    data.debts.forEach((debt) => {
+      const name = String(debt[COLUMNS.DEBTS.PERSON] || '').trim();
+      const normalizedName = name.toLowerCase().replace(/\s+/g, ' ');
+      if (normalizedName && !peopleByNormalizedName.has(normalizedName)) {
+        namesToCreate.set(normalizedName, name);
+      }
+    });
+
+    if (namesToCreate.size > 0) {
+      const { data: createdPeople, error: createPeopleError } = await supabase
+        .from('people')
+        .insert([...namesToCreate.values()].map(name => ({
+          owner_user_id: user.id,
+          name,
+        })))
+        .select('id, name, normalized_name');
+      if (createPeopleError) throw createPeopleError;
+      createdPeople.forEach(person => peopleByNormalizedName.set(person.normalized_name, person));
+    }
+
     const debtsToInsert = data.debts.map(debt => ({
       user_id: user.id,
       debt_id: debt[COLUMNS.DEBTS.DEBT_ID],
+      person_id: debt[COLUMNS.DEBTS.PERSON_ID] || peopleByNormalizedName.get(
+        String(debt[COLUMNS.DEBTS.PERSON] || '').trim().toLowerCase().replace(/\s+/g, ' ')
+      )?.id,
       person: debt[COLUMNS.DEBTS.PERSON],
       debt_category: debt[COLUMNS.DEBTS.DEBT_CATEGORY],
       direction: debt[COLUMNS.DEBTS.DIRECTION],

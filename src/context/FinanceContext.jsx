@@ -369,13 +369,14 @@ export function FinanceProvider({ children }) {
         } catch (error) {
           console.error('Error generating debt ID:', error);
           setErrors([`Failed to generate debt ID: ${error.message}`]);
-          return null;
+          throw error;
         }
       }
       
       const newDebt = {
         ...debt,
         [DEBT_ID]: debtId,
+        [COLUMNS.DEBTS.IS_OWNER]: true,
       };
       
       // Update local state immediately
@@ -384,11 +385,16 @@ export function FinanceProvider({ children }) {
       // Save to Supabase if user is authenticated
       if (user) {
         try {
-          await supabaseService.createDebt(newDebt);
+          const createdDebt = await supabaseService.createDebt(newDebt);
+          setDebts((prev) =>
+            prev.map((d) => (d[DEBT_ID] === newDebt[DEBT_ID] ? { ...d, ...createdDebt } : d))
+          );
+          return createdDebt;
         } catch (error) {
           console.error('Error creating debt:', error);
           setErrors([`Failed to save debt: ${error.message}`]);
           setDebts((prev) => prev.filter((d) => d[DEBT_ID] !== newDebt[DEBT_ID]));
+          throw error;
         }
       }
       

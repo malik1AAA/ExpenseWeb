@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Modal, Input, Select, Textarea, Button } from '../common';
 import { COLUMNS, DEBT_DIRECTION, DEBT_CATEGORY } from '../../config/excelSchema';
 import { getCurrentDate } from '../../utils/dateUtils';
+import { Search, UserPlus } from 'lucide-react';
 
 /**
  * DebtForm - Modal form for adding/editing debts
@@ -11,10 +12,13 @@ export default function DebtForm({
   onClose, 
   onSubmit, 
   debt = null,
+  people = [],
+  onAddPerson,
   defaultDirection = DEBT_DIRECTION.LENT
 }) {
   const [formData, setFormData] = useState({
     [COLUMNS.DEBTS.PERSON]: '',
+    [COLUMNS.DEBTS.PERSON_ID]: '',
     [COLUMNS.DEBTS.DEBT_CATEGORY]: DEBT_CATEGORY.CASH,
     [COLUMNS.DEBTS.DIRECTION]: defaultDirection,
     [COLUMNS.DEBTS.ORIGINAL_AMOUNT]: '',
@@ -24,12 +28,15 @@ export default function DebtForm({
   });
 
   const [errors, setErrors] = useState({});
+  const [personSearch, setPersonSearch] = useState('');
+  const [isPersonListOpen, setIsPersonListOpen] = useState(false);
 
   // Populate form when editing
   useEffect(() => {
     if (debt) {
       setFormData({
         [COLUMNS.DEBTS.PERSON]: debt[COLUMNS.DEBTS.PERSON] || '',
+        [COLUMNS.DEBTS.PERSON_ID]: debt[COLUMNS.DEBTS.PERSON_ID] || '',
         [COLUMNS.DEBTS.DEBT_CATEGORY]: debt[COLUMNS.DEBTS.DEBT_CATEGORY] || DEBT_CATEGORY.CASH,
         [COLUMNS.DEBTS.DIRECTION]: debt[COLUMNS.DEBTS.DIRECTION] || defaultDirection,
         [COLUMNS.DEBTS.ORIGINAL_AMOUNT]: debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT]?.toString() || '',
@@ -41,6 +48,7 @@ export default function DebtForm({
       // Reset form for new debt
       setFormData({
         [COLUMNS.DEBTS.PERSON]: '',
+        [COLUMNS.DEBTS.PERSON_ID]: '',
         [COLUMNS.DEBTS.DEBT_CATEGORY]: DEBT_CATEGORY.CASH,
         [COLUMNS.DEBTS.DIRECTION]: defaultDirection,
         [COLUMNS.DEBTS.ORIGINAL_AMOUNT]: '',
@@ -49,14 +57,16 @@ export default function DebtForm({
         [COLUMNS.DEBTS.NOTES]: '',
       });
     }
+    setPersonSearch('');
+    setIsPersonListOpen(false);
     setErrors({});
   }, [debt, isOpen, defaultDirection]);
 
   const validate = () => {
     const newErrors = {};
 
-    if (!formData[COLUMNS.DEBTS.PERSON].trim()) {
-      newErrors[COLUMNS.DEBTS.PERSON] = 'Person is required';
+    if (!formData[COLUMNS.DEBTS.PERSON_ID]) {
+      newErrors[COLUMNS.DEBTS.PERSON_ID] = 'Select a person';
     }
 
     const amount = parseFloat(formData[COLUMNS.DEBTS.ORIGINAL_AMOUNT]);
@@ -107,6 +117,35 @@ export default function DebtForm({
     }
   };
 
+  const activePeople = people.filter(person =>
+    person.is_active || person.id === formData[COLUMNS.DEBTS.PERSON_ID]
+  );
+  const matchingPeople = activePeople.filter(person =>
+    person.name.toLowerCase().includes(personSearch.trim().toLowerCase())
+  );
+  const selectedPerson = people.find(person => person.id === formData[COLUMNS.DEBTS.PERSON_ID]);
+
+  const selectPerson = (person) => {
+    setFormData(current => ({
+      ...current,
+      [COLUMNS.DEBTS.PERSON_ID]: person.id,
+      [COLUMNS.DEBTS.PERSON]: person.name,
+    }));
+    setPersonSearch(person.name);
+    setIsPersonListOpen(false);
+    setErrors(current => ({ ...current, [COLUMNS.DEBTS.PERSON_ID]: undefined }));
+  };
+
+  const handleAddPerson = async () => {
+    if (!onAddPerson) return;
+    try {
+      const person = await onAddPerson();
+      if (person) selectPerson(person);
+    } catch (error) {
+      setErrors(current => ({ ...current, [COLUMNS.DEBTS.PERSON_ID]: error.message }));
+    }
+  };
+
   // Prepare debt category options
   const debtCategoryOptions = [
     { value: DEBT_CATEGORY.CASH, label: 'Cash' },
@@ -127,14 +166,73 @@ export default function DebtForm({
       size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Person"
-          value={formData[COLUMNS.DEBTS.PERSON]}
-          onChange={(e) => handleChange(COLUMNS.DEBTS.PERSON, e.target.value)}
-          error={errors[COLUMNS.DEBTS.PERSON]}
-          placeholder="e.g., John Doe"
-          required
-        />
+        <div className="relative">
+          <label htmlFor="debt-person-search" className="block text-sm font-medium text-surface-700 mb-2">
+            Person <span className="text-red-500" aria-hidden="true">*</span>
+          </label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+            <input
+              id="debt-person-search"
+              role="combobox"
+              aria-expanded={isPersonListOpen}
+              aria-controls="debt-person-options"
+              aria-autocomplete="list"
+              autoComplete="off"
+              className={`w-full rounded-lg border py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors[COLUMNS.DEBTS.PERSON_ID] ? 'border-red-500' : 'border-surface-300'}`}
+              value={isPersonListOpen ? personSearch : selectedPerson?.name || personSearch}
+              onChange={event => {
+                setPersonSearch(event.target.value);
+                setIsPersonListOpen(true);
+                if (formData[COLUMNS.DEBTS.PERSON_ID]) {
+                  handleChange(COLUMNS.DEBTS.PERSON_ID, '');
+                  handleChange(COLUMNS.DEBTS.PERSON, '');
+                }
+              }}
+              onFocus={() => {
+                setPersonSearch(selectedPerson?.name || '');
+                setIsPersonListOpen(true);
+              }}
+              onBlur={() => window.setTimeout(() => setIsPersonListOpen(false), 120)}
+              placeholder="Search active people"
+              required={!formData[COLUMNS.DEBTS.PERSON_ID]}
+            />
+          </div>
+          {errors[COLUMNS.DEBTS.PERSON_ID] && (
+            <p className="mt-1 text-sm text-red-600" role="alert">{errors[COLUMNS.DEBTS.PERSON_ID]}</p>
+          )}
+          {isPersonListOpen && (
+            <div id="debt-person-options" role="listbox" className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-surface-200 bg-white shadow-lg">
+              {matchingPeople.map(person => (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={person.id === formData[COLUMNS.DEBTS.PERSON_ID]}
+                  key={person.id}
+                  onMouseDown={event => event.preventDefault()}
+                  onClick={() => selectPerson(person)}
+                  className="block w-full px-3 py-2 text-left text-sm hover:bg-surface-50"
+                >
+                  {person.name}{!person.is_active ? ' (Inactive — existing debt)' : ''}
+                </button>
+              ))}
+              {matchingPeople.length === 0 && (
+                <p className="px-3 py-2 text-sm text-surface-500">No matching active people.</p>
+              )}
+              {onAddPerson && (
+                <button
+                  type="button"
+                  onMouseDown={event => event.preventDefault()}
+                  onClick={handleAddPerson}
+                  className="flex w-full items-center gap-2 border-t border-surface-100 px-3 py-2 text-left text-sm font-medium text-primary-700 hover:bg-primary-50"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Add a person
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         <div>
           <Select

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Wallet, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { COLUMNS, DEBT_DIRECTION } from '../../config/excelSchema';
+import { getDebtReturnKey } from '../../services/debtService';
 
 /**
  * DebtStatistics Component
@@ -12,7 +13,7 @@ export default function DebtStatistics({ debts = [], debtReturns = [] }) {
   const debtReturnsByDebtId = useMemo(() => {
     const map = new Map();
     debtReturns.forEach((ret) => {
-      const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
+      const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_DATABASE_ID] || ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
       if (!map.has(debtId)) {
         map.set(debtId, []);
       }
@@ -36,7 +37,7 @@ export default function DebtStatistics({ debts = [], debtReturns = [] }) {
 
       // Calculate total returned using the map for O(1) lookups
       const totalReturned = directionDebts.reduce((sum, debt) => {
-        const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+        const debtId = getDebtReturnKey(debt);
         const returns = debtReturnsByDebtId.get(debtId) || [];
         const debtReturnsSum = returns.reduce(
           (rSum, r) => rSum + parseFloat(r[COLUMNS.DEBT_RETURNS.AMOUNT] || 0),
@@ -50,7 +51,7 @@ export default function DebtStatistics({ debts = [], debtReturns = [] }) {
 
       // Count active debts (not fully paid)
       const activeCount = directionDebts.filter((debt) => {
-        const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+        const debtId = getDebtReturnKey(debt);
         const returns = debtReturnsByDebtId.get(debtId) || [];
         const returned = returns.reduce(
           (sum, r) => sum + parseFloat(r[COLUMNS.DEBT_RETURNS.AMOUNT] || 0),
@@ -87,7 +88,7 @@ export default function DebtStatistics({ debts = [], debtReturns = [] }) {
       const dueDate = debt[COLUMNS.DEBTS.DUE_DATE];
       if (!dueDate) return false;
 
-      const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+      const debtId = getDebtReturnKey(debt);
       const returns = debtReturnsByDebtId.get(debtId) || [];
       const returned = returns.reduce(
         (sum, r) => sum + parseFloat(r[COLUMNS.DEBT_RETURNS.AMOUNT] || 0),

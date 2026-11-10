@@ -2,6 +2,7 @@ import { formatCurrency } from '../../utils/currencyUtils';
 import { formatDate } from '../../utils/dateUtils';
 import { COLUMNS } from '../../config/excelSchema';
 import { Trash2 } from 'lucide-react';
+import { matchesDebtReturn } from '../../services/debtService';
 
 /**
  * DebtReturnsList - List of returns/payments for a specific debt
@@ -9,11 +10,12 @@ import { Trash2 } from 'lucide-react';
 export default function DebtReturnsList({ 
   debtReturns = [],
   debtId,
+  debt,
   onDeleteReturn
 }) {
   // Filter returns for this specific debt
   const returnsForDebt = debtReturns
-    .filter(ret => ret[COLUMNS.DEBT_RETURNS.DEBT_ID] === debtId)
+    .filter(ret => debt ? matchesDebtReturn(debt, ret) : ret[COLUMNS.DEBT_RETURNS.DEBT_ID] === debtId)
     .sort((a, b) => {
       const dateA = new Date(a[COLUMNS.DEBT_RETURNS.DATE]);
       const dateB = new Date(b[COLUMNS.DEBT_RETURNS.DATE]);

@@ -7,6 +7,7 @@
 import { supabase } from '../lib/supabaseClient';
 import { COLUMNS } from '../config/excelSchema';
 import { generateExpenseId, generateDebtId, generateReturnId } from './idGeneratorService';
+import { getOrCreatePersonForImport } from './peopleService';
 
 /**
  * Import status enum
@@ -405,6 +406,7 @@ export class ImportQueueManager {
           .insert({
             user_id: userId,
             debt_id: debtId,
+            person_id: await getOrCreatePersonForImport(debt[COLUMNS.DEBTS.PERSON]),
             person: debt[COLUMNS.DEBTS.PERSON],
             debt_category: debt[COLUMNS.DEBTS.DEBT_CATEGORY],
             direction: debt[COLUMNS.DEBTS.DIRECTION],

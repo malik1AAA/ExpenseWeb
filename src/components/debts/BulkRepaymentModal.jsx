@@ -267,7 +267,7 @@ export default function BulkRepaymentModal({
                   </p>
                   {eligibleDebts.map(({ debt, remaining }) => (
                     <div
-                      key={debt[COLUMNS.DEBTS.DEBT_ID]}
+                      key={debt[COLUMNS.DEBTS.DATABASE_ID] || debt[COLUMNS.DEBTS.DEBT_ID]}
                       className="flex items-center justify-between text-sm py-1 border-b border-surface-100 last:border-0"
                     >
                       <span className="text-surface-700">
@@ -436,14 +436,17 @@ export default function BulkRepaymentModal({
                 <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-green-900 mb-1">
-                    Bulk Repayment Saved Successfully
+                    {successResult.confirmation_required ? 'Payment Request Sent for Confirmation' : 'Bulk Repayment Saved Successfully'}
                   </p>
                   <p className="text-sm text-green-800">
-                    {successResult.allocations_count} allocation{successResult.allocations_count !== 1 ? 's' : ''}{' '}
-                    recorded for {successResult.person} ({successResult.direction} / {successResult.debt_category}).
+                    {successResult.confirmation_required
+                      ? `${successResult.allocations_count} allocation${successResult.allocations_count !== 1 ? 's' : ''} pending ${successResult.person}'s confirmation (${successResult.direction} / ${successResult.debt_category}).`
+                      : `${successResult.allocations_count} allocation${successResult.allocations_count !== 1 ? 's' : ''} recorded for ${successResult.person} (${successResult.direction} / ${successResult.debt_category}).`}
                   </p>
                   <p className="text-sm text-green-800 mt-1">
-                    Total paid: {formatCurrency(successResult.total_paid)}
+                    {successResult.confirmation_required
+                      ? `Pending confirmation; the balance has not changed. Requested total: ${formatCurrency(successResult.total_paid)}`
+                      : `Total paid: ${formatCurrency(successResult.total_paid)}`}
                   </p>
                 </div>
               </div>
@@ -452,12 +455,12 @@ export default function BulkRepaymentModal({
               {successResult.allocations && successResult.allocations.length > 0 && (
                 <div className="p-4 bg-surface-50 rounded-lg border border-surface-200">
                   <h4 className="text-sm font-semibold text-surface-900 mb-3">
-                    Recorded Allocations
+                    {successResult.confirmation_required ? 'Pending allocations' : 'Recorded Allocations'}
                   </h4>
                   <div className="space-y-2">
                     {successResult.allocations.map((alloc) => (
                       <div
-                        key={alloc.return_id}
+                        key={alloc.request_id || alloc.return_id || alloc.debt_id}
                         className="flex items-center justify-between text-sm py-1 border-b border-surface-100 last:border-0"
                       >
                         <span className="text-surface-700">

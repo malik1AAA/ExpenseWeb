@@ -6,3 +6,4 @@ export { default as DebtReturnsList } from './DebtReturnsList';
 export { default as DebtDetails } from './DebtDetails';
 export { default as DebtFilters } from './DebtFilters';
 export { default as BulkRepaymentModal } from './BulkRepaymentModal';
+export { default as DebtPaymentRequestForm } from './DebtPaymentRequestForm';

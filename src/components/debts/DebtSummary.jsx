@@ -1,6 +1,7 @@
 import { formatCurrency } from '../../utils/currencyUtils';
 import { TrendingUp, TrendingDown, DollarSign, AlertCircle } from 'lucide-react';
 import { COLUMNS, DEBT_DIRECTION } from '../../config/excelSchema';
+import { getDebtReturnKey } from '../../services/debtService';
 
 /**
  * DebtSummary - Summary cards for debts page
@@ -10,7 +11,7 @@ export default function DebtSummary({
   debtReturns = []
 }) {
   const debtReturnsByDebtId = debtReturns.reduce((acc, ret) => {
-    const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
+    const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_DATABASE_ID] || ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
     acc.set(debtId, (acc.get(debtId) || 0) + parseFloat(ret[COLUMNS.DEBT_RETURNS.AMOUNT] || 0));
     return acc;
   }, new Map());
@@ -32,7 +33,7 @@ export default function DebtSummary({
   // Count overdue debts
   const now = new Date();
   const overdueCount = debts.filter(d => {
-    const debtId = d[COLUMNS.DEBTS.DEBT_ID];
+    const debtId = getDebtReturnKey(d);
     const returned = getDebtReturnTotal(debtId);
     const remaining = parseFloat(d[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0) - returned;
     if (remaining <= 0) return false;

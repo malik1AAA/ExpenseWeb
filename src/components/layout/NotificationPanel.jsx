@@ -4,6 +4,7 @@ import { useFinance } from '../../hooks/useFinance';
 import { COLUMNS } from '../../config/excelSchema';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { formatDate, getDaysBetween } from '../../utils/dateUtils';
+import { matchesDebtReturn, getDebtReturnKey } from '../../services/debtService';
 
 export default function NotificationPanel({ isOpen, onClose }) {
   const [notifications, setNotifications] = useState([]);
@@ -20,12 +21,12 @@ export default function NotificationPanel({ isOpen, onClose }) {
     const now = new Date();
 
     debts.forEach(debt => {
-      const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
+      const debtId = getDebtReturnKey(debt);
       const dueDate = debt[COLUMNS.DEBTS.DUE_DATE];
       const originalAmount = parseFloat(debt[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0);
       
       // Calculate remaining amount
-      const returns = debtReturns.filter(r => r[COLUMNS.DEBT_RETURNS.DEBT_ID] === debtId);
+      const returns = debtReturns.filter(r => matchesDebtReturn(debt, r));
       const totalReturned = returns.reduce((sum, r) => sum + parseFloat(r[COLUMNS.DEBT_RETURNS.AMOUNT] || 0), 0);
       const remaining = originalAmount - totalReturned;
 

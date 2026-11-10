@@ -7,6 +7,8 @@ import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
 import Reports from "./pages/Reports";
 import Debts from "./pages/Debts";
+import People from "./pages/People";
+import AcceptPersonInvite from "./pages/AcceptPersonInvite";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -48,6 +50,14 @@ function App() {
             <PublicRoute>
               <UpdatePassword />
             </PublicRoute>
+          }
+        />
+        <Route
+          path="/link-person"
+          element={
+            <ProtectedRoute>
+              <AcceptPersonInvite />
+            </ProtectedRoute>
           }
         />
 
@@ -96,6 +106,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Debts />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/people"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <People />
               </Layout>
             </ProtectedRoute>
           }

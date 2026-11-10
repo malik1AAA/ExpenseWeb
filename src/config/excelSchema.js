@@ -24,8 +24,11 @@ export const COLUMNS = {
   },
   
   DEBTS: {
+    DATABASE_ID: 'DatabaseID',
+    IS_OWNER: 'IsOwner',
     DEBT_ID: 'DebtID',
     PERSON: 'Person',
+    PERSON_ID: 'PersonID',
     DEBT_CATEGORY: 'DebtCategory',
     DIRECTION: 'Direction',
     ORIGINAL_AMOUNT: 'OriginalAmount',
@@ -36,6 +39,7 @@ export const COLUMNS = {
   
   DEBT_RETURNS: {
     RETURN_ID: 'ReturnID',
+    DEBT_DATABASE_ID: 'DebtDatabaseID',
     DEBT_ID: 'DebtID',
     DATE: 'Date',
     AMOUNT: 'Amount',

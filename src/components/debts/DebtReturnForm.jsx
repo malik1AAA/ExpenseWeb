@@ -50,6 +50,7 @@ export default function DebtReturnForm({
 
     const returnData = {
       ...formData,
+      [COLUMNS.DEBT_RETURNS.DEBT_DATABASE_ID]: debt[COLUMNS.DEBTS.DATABASE_ID],
       [COLUMNS.DEBT_RETURNS.DEBT_ID]: debt[COLUMNS.DEBTS.DEBT_ID],
       [COLUMNS.DEBT_RETURNS.AMOUNT]: parseFloat(formData[COLUMNS.DEBT_RETURNS.AMOUNT]),
     };

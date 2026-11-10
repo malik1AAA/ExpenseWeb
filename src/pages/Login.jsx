@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Input, Button } from '../components/common';
 import AuthLayout from '../components/auth/AuthLayout';
@@ -7,6 +7,7 @@ import { LogIn, AlertCircle } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signIn } = useAuth();
   
   const [email, setEmail] = useState('');
@@ -22,7 +23,11 @@ export default function Login() {
     const result = await signIn(email, password);
 
     if (result.success) {
-      navigate('/dashboard', { replace: true });
+      const destination = location.state?.from;
+      const nextPath = destination?.pathname?.startsWith('/')
+        ? `${destination.pathname}${destination.search || ''}${destination.hash || ''}`
+        : '/dashboard';
+      navigate(nextPath, { replace: true });
     } else {
       setError(result.error || 'Failed to sign in. Please check your credentials.');
       setLoading(false);

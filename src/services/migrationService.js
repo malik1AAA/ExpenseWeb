@@ -5,12 +5,50 @@
 
 import { supabase } from '../lib/supabaseClient';
 import { COLUMNS } from '../config/excelSchema';
+import { getOrCreatePersonForImport } from './peopleService';
+import { generateDebtId, generateReturnId } from './idGeneratorService';
 
 const LOCAL_STORAGE_KEYS = {
   EXPENSES: 'finance_expenses',
   DEBTS: 'finance_debts',
   DEBT_RETURNS: 'finance_debt_returns',
   CATEGORIES: 'finance_categories',
+};
+
+const insertRowsWithGeneratedIds = async ({ table, rows, idColumn, generateId }) => {
+  const rowsWithIds = rows.filter(row => row[idColumn]);
+  const rowsWithoutIds = rows.filter(row => !row[idColumn]);
+  const errors = [];
+  let migrated = 0;
+
+  if (rowsWithIds.length > 0) {
+    const { error } = await supabase.from(table).insert(rowsWithIds);
+    if (error) {
+      errors.push(error.message);
+    } else {
+      migrated += rowsWithIds.length;
+    }
+  }
+
+  for (const row of rowsWithoutIds) {
+    let insertError;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      row[idColumn] = await generateId();
+      const { error } = await supabase.from(table).insert(row);
+      if (!error) {
+        migrated += 1;
+        insertError = null;
+        break;
+      }
+
+      insertError = error;
+      if (error.code !== '23505') break;
+    }
+
+    if (insertError) errors.push(insertError.message);
+  }
+
+  return { migrated, errors };
 };
 
 /**
@@ -233,9 +271,12 @@ export const migrateToSupabase = async (data) => {
 
     // Migrate debts (no dependencies)
     if (data.debts && data.debts.length > 0) {
-      const debtsToInsert = data.debts.map(debt => ({
+      const debtsToInsert = [];
+      for (const debt of data.debts) {
+        debtsToInsert.push({
         user_id: user.id,
-        debt_id: debt[COLUMNS.DEBTS.DEBT_ID] || `debt_${Date.now()}_${Math.random()}`,
+        debt_id: debt[COLUMNS.DEBTS.DEBT_ID] || null,
+        person_id: await getOrCreatePersonForImport(debt[COLUMNS.DEBTS.PERSON]),
         person: debt[COLUMNS.DEBTS.PERSON],
         debt_category: debt[COLUMNS.DEBTS.DEBT_CATEGORY] || 'Cash',
         direction: debt[COLUMNS.DEBTS.DIRECTION],
@@ -243,39 +284,38 @@ export const migrateToSupabase = async (data) => {
         date: debt[COLUMNS.DEBTS.DATE],
         due_date: debt[COLUMNS.DEBTS.DUE_DATE] || null,
         notes: debt[COLUMNS.DEBTS.NOTES] || null,
-      }));
-
-      const { error } = await supabase
-        .from('debts')
-        .insert(debtsToInsert);
-
-      if (error) {
-        result.errors.push(`Failed to migrate debts: ${error.message}`);
-      } else {
-        result.migrated.debts = debtsToInsert.length;
+        });
       }
+
+      const debtResult = await insertRowsWithGeneratedIds({
+        table: 'debts',
+        rows: debtsToInsert,
+        idColumn: 'debt_id',
+        generateId: generateDebtId,
+      });
+      result.migrated.debts = debtResult.migrated;
+      result.errors.push(...debtResult.errors.map(error => `Failed to migrate debts: ${error}`));
     }
 
     // Migrate debt returns (depends on debts)
     if (data.debtReturns && data.debtReturns.length > 0) {
       const returnsToInsert = data.debtReturns.map(ret => ({
         user_id: user.id,
-        return_id: ret[COLUMNS.DEBT_RETURNS.RETURN_ID] || `ret_${Date.now()}_${Math.random()}`,
+        return_id: ret[COLUMNS.DEBT_RETURNS.RETURN_ID] || null,
         debt_id: ret[COLUMNS.DEBT_RETURNS.DEBT_ID],
         date: ret[COLUMNS.DEBT_RETURNS.DATE],
         amount: ret[COLUMNS.DEBT_RETURNS.AMOUNT],
         notes: ret[COLUMNS.DEBT_RETURNS.NOTES] || null,
       }));
 
-      const { error } = await supabase
-        .from('debt_returns')
-        .insert(returnsToInsert);
-
-      if (error) {
-        result.errors.push(`Failed to migrate debt returns: ${error.message}`);
-      } else {
-        result.migrated.debtReturns = returnsToInsert.length;
-      }
+      const returnResult = await insertRowsWithGeneratedIds({
+        table: 'debt_returns',
+        rows: returnsToInsert,
+        idColumn: 'return_id',
+        generateId: generateReturnId,
+      });
+      result.migrated.debtReturns = returnResult.migrated;
+      result.errors.push(...returnResult.errors.map(error => `Failed to migrate debt returns: ${error}`));
     }
 
     if (result.errors.length > 0) {

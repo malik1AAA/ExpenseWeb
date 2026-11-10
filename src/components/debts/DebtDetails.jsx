@@ -3,6 +3,7 @@ import { formatCurrency } from '../../utils/currencyUtils';
 import { formatDate } from '../../utils/dateUtils';
 import { COLUMNS, DEBT_DIRECTION } from '../../config/excelSchema';
 import { User, Calendar, DollarSign, Clock, FileText, TrendingUp, TrendingDown } from 'lucide-react';
+import { matchesDebtReturn } from '../../services/debtService';
 
 /**
  * DebtDetails - Modal component showing debt details and transaction history
@@ -16,9 +17,8 @@ export default function DebtDetails({
   if (!debt) return null;
 
   // Calculate total returned and remaining
-  const debtId = debt[COLUMNS.DEBTS.DEBT_ID];
   const returns = debtReturns.filter(
-    ret => ret[COLUMNS.DEBT_RETURNS.DEBT_ID] === debtId
+    ret => matchesDebtReturn(debt, ret)
   );
   
   const totalReturned = returns.reduce(
