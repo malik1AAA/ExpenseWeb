@@ -228,6 +228,8 @@ export default function DebtTable({
                     <div className="flex items-center justify-end gap-1">
                       {remaining > 0 && onRecordReturn && (
                         <button
+                          type="button"
+                          aria-label={`Record payment for ${debt[COLUMNS.DEBTS.PERSON]}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             onRecordReturn(debt);
@@ -239,9 +241,11 @@ export default function DebtTable({
                         </button>
                       )}
                       <button
+                        type="button"
+                        aria-label={`Edit debt for ${debt[COLUMNS.DEBTS.PERSON]}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onEdit(debt);
+                          if (onEdit) onEdit(debt);
                         }}
                         className="p-1.5 rounded-lg hover:bg-surface-100 transition-colors"
                         title="Edit"
@@ -249,9 +253,11 @@ export default function DebtTable({
                         <Edit className="w-4 h-4 text-surface-600" />
                       </button>
                       <button
+                        type="button"
+                        aria-label={`Delete debt for ${debt[COLUMNS.DEBTS.PERSON]}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          onDelete(debt);
+                          if (onDelete) onDelete(debt);
                         }}
                         className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
                         title="Delete"

@@ -9,33 +9,39 @@ export default function DebtSummary({
   debts = [],
   debtReturns = []
 }) {
+  const debtReturnsByDebtId = debtReturns.reduce((acc, ret) => {
+    const debtId = ret[COLUMNS.DEBT_RETURNS.DEBT_ID];
+    acc.set(debtId, (acc.get(debtId) || 0) + parseFloat(ret[COLUMNS.DEBT_RETURNS.AMOUNT] || 0));
+    return acc;
+  }, new Map());
+
+  const getDebtReturnTotal = (debtId) => debtReturnsByDebtId.get(debtId) || 0;
+
   // Calculate totals for lent debts
   const lentDebts = debts.filter(d => d[COLUMNS.DEBTS.DIRECTION] === DEBT_DIRECTION.LENT);
   const lentOriginal = lentDebts.reduce((sum, d) => sum + parseFloat(d[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0), 0);
-  const lentReturned = debtReturns
-    .filter(ret => lentDebts.some(d => d[COLUMNS.DEBTS.DEBT_ID] === ret[COLUMNS.DEBT_RETURNS.DEBT_ID]))
-    .reduce((sum, ret) => sum + parseFloat(ret[COLUMNS.DEBT_RETURNS.AMOUNT] || 0), 0);
+  const lentReturned = lentDebts.reduce((sum, d) => sum + getDebtReturnTotal(d[COLUMNS.DEBTS.DEBT_ID]), 0);
   const lentRemaining = lentOriginal - lentReturned;
 
   // Calculate totals for borrowed debts
   const borrowedDebts = debts.filter(d => d[COLUMNS.DEBTS.DIRECTION] === DEBT_DIRECTION.BORROWED);
   const borrowedOriginal = borrowedDebts.reduce((sum, d) => sum + parseFloat(d[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0), 0);
-  const borrowedReturned = debtReturns
-    .filter(ret => borrowedDebts.some(d => d[COLUMNS.DEBTS.DEBT_ID] === ret[COLUMNS.DEBT_RETURNS.DEBT_ID]))
-    .reduce((sum, ret) => sum + parseFloat(ret[COLUMNS.DEBT_RETURNS.AMOUNT] || 0), 0);
+  const borrowedReturned = borrowedDebts.reduce((sum, d) => sum + getDebtReturnTotal(d[COLUMNS.DEBTS.DEBT_ID]), 0);
   const borrowedRemaining = borrowedOriginal - borrowedReturned;
 
   // Count overdue debts
   const now = new Date();
   const overdueCount = debts.filter(d => {
     const debtId = d[COLUMNS.DEBTS.DEBT_ID];
-    const returned = debtReturns
-      .filter(ret => ret[COLUMNS.DEBT_RETURNS.DEBT_ID] === debtId)
-      .reduce((sum, ret) => sum + parseFloat(ret[COLUMNS.DEBT_RETURNS.AMOUNT] || 0), 0);
+    const returned = getDebtReturnTotal(debtId);
     const remaining = parseFloat(d[COLUMNS.DEBTS.ORIGINAL_AMOUNT] || 0) - returned;
     if (remaining <= 0) return false;
-    const dueDate = new Date(d[COLUMNS.DEBTS.DUE_DATE]);
-    return returned === 0 && dueDate < now;
+
+    const dueDateValue = d[COLUMNS.DEBTS.DUE_DATE];
+    if (!dueDateValue) return false;
+
+    const dueDate = new Date(dueDateValue);
+    return returned === 0 && !Number.isNaN(dueDate.getTime()) && dueDate < now;
   }).length;
 
   const summaryCards = [
